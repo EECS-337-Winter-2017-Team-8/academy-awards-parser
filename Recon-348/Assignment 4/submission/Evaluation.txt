@@ -1,0 +1,52 @@
+Simple Naive Bayes:
+Accuracy:	0.8822382671480143
+Precision:	0.8144148516729712
+Recall:		0.8263405209898016
+F1 Measure:	0.8191465688893885
+
+Best Bayes:
+Accuracy:	0.8840433212996389
+Precision:	0.815521384242666
+Recall:		0.8412832371465464
+F1 Measure:	0.8260712539681965
+
+I find these results difficult to analyze, and can only conclude from this and many
+other tests that I ran that the statistics on these algorithms are likely to have
+no small degree of error or variation given the specifics of the data set. I have
+included the results of the other algorithms tested in stats.txt for your viewing
+pleasure. The Best Bayes I included was not actually my best Bayes, but was the best
+one that had substantial modifications. Like I said, I think variability in the data
+set far outscopes any of the changes I made to the tokenizer, and indeed some of the
+changes that in theory should have helped actually served to lower the score, perhaps
+due to some unforeseen interplay of the elements. I can only conclude that objectively
+determining what is and is not important for the Bayes Classifier to consider is
+difficult at best and objectively impossible at worst, since any number of subconscious
+and imperceptible factors could be acting on the data (for example, people giving good
+reviews might be more inclined to use good grammar for some reason - I can't empirically
+rule that out). However, when I did filter out punctuation and some "meaningless" words
+like coordinating conjunctions, and then compared the results to a completely unfiltered
+set of words, I got about .6 F1 for the unfiltered and about .8 F1 for the filtered. The
+logical conclusion here seems to be that for some unknown reason, Sara's tokenizer performs
+better than the NLTK tokenizer for this specific data set, as my "regular Bayes" outperforms
+unfiltered NLTK substantially. I am not sure quite why this is so; however, other results with
+my data sets have convinced me that it may actually be possible. The only alternative is that I
+accidentally changed something between my Bayes code and my Best Bayes code that I did not
+realize would affect the outcome. My initial suspicion was that Bayes might be using a pre-made
+dictionary by accident, but I went back over the code and can't find any evidence for this
+being the case. Additionally, I remember that my stats were higher when I was accidentally
+using the dictionary to train and test on the same data. The stats went down significantly
+(from .93 to about .82) when I fixed this, so it makes sense that this is not my problem. I
+don't know why the NLTK tokenizer appears to do so poorly compared to Sara's implementation,
+but due to time constraints and the fact that I am currently travelling (and thus have only
+my laptop, not my desktop, to run tests on), I cannot get the definitive proof or explanation
+that I am looking for - I would need to run a lot more tests on the full corpus, and
+unfortunately they take more than an hour apiece on my laptop (NLTK is apparently very slow).
+If it interests you, I can run more tests on my desktop when I have the time (which may not be
+until the quarter ends, as I am very busy with all my classes). I, too, am curious about what
+causes these oddities in the Bayesian classification. Is there a way to get my hands on a
+substantially larger corpus for testing? I feel like the corpus may be skewing my results. As
+an example, a subset of the reviews that I was using for expedited testing showed a .866 F1
+score for the "Best Bayes" that scored a .826 F1 on the whole corpus. This is where my
+argument of large variability in the data set which affects the score significantly takes its
+root; you can see for yourself what I'm talking about by comparing the Best Bayes to the last
+entry in the stats.txt file.
