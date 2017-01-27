@@ -298,4 +298,5 @@ def calcStats(classifier, data):
       
 REVIEW_DIR = "movies_reviews/"
 myBayes = Bayes_Classifier()
-print calcStats(myBayes, REVIEW_DIR)
+#print calcStats(myBayes, REVIEW_DIR)
+#myBayes.train()
