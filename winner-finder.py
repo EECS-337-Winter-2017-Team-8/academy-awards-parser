@@ -1,3 +1,5 @@
+import nltk
+
 def keywords(filepath):
 	keywords = []
 	wordfile = open(filepath, "r")
@@ -31,3 +33,11 @@ awards = useful_filter(["congratulations"], GG_tweets)
 host_GG_tweets = useful_filter(["host"], GG_tweets)
 presenter_GG_tweets = useful_filter(["present"], GG_tweets)
 
+for tweet in awards:
+	word_list = nltk.word_tokenize(tweet)
+	for i in range(0, word_list):
+		if word_list[i] == "Congratulations":
+			if (word_list[i+1]=="to" || word_list[i+1] in string.punctuation.replace("@","")):
+				winner_start_index = word_list[i] + 2
+
+	
