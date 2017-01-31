@@ -295,7 +295,7 @@ def calcStats(classifier, data):
 
    return stats
 
-      
+
 REVIEW_DIR = "movies_reviews/"
 myBayes = Bayes_Classifier()
 print calcStats(myBayes, REVIEW_DIR)
