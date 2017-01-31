@@ -1,33 +1,92 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~IDE Set up ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import nltk, string, os
 
+#OmarIDESetUpStuff: Ignore please
+# execfile('../Desktop/Code/nlp-eecs337/winner-finder.py')
+# os.chdir('../Desktop/Code/nlp-eecs337')
+
 def clear():
 	print "\n"*62
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~Functions Set up ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def keywords(filepath):
-	# Function to load keywords in useful format
-	keywords = []
-	wordfile = open(filepath, "r")
-	for line in wordfile:
-		keywords.append(line)
-	return keywords
+# def keywords(filepath):
+# 	# Function to load keywords in useful format
+# 	keywords = []
+# 	wordfile = open(filepath, "r")
+# 	for line in wordfile:
+# 		keywords.append(line)
+# 	return keywords
 
-def useful_filter(search_array, data, or_flag=True):
+def number_filter(search_array, data, or_flag=True):
+	#takes strings
+	matchingLines = []
+	if(or_flag):
+		for line in data:
+			for elt in search_array:
+				if (elt.isdigit()):
+					if elt in line:
+						# print linep
+						matchingLines.append(line)
+					else:
+						continue
+				else:
+					continue
+	else:
+		for line in data:
+			matchFlag = True
+			for elt in search_array:
+				if (elt.isdigit()):
+					if not(elt in line):
+						matchFlag = False
+						break
+			if(matchFlag == True):
+				matchingLines.append(line)
+	return matchingLines
+
+def word_filter(search_array, data, or_flag=True):
 	# Function to filter over Data Corpus, selecting entries which
 	# match verbatim with either/all elements of the search_array
+	#		Using nltk.word_tokenize(line) slows performance so much.
+	#What if we use split
+	search_array = map(str.lower, search_array)
 	matchingLines = []
-	while(search_array):
-		search_elt = search_array.pop()
-		elt_matchingLines = filter (lambda (line):
-			(search_elt.lower() in line.lower()), data)
-		if(or_flag):
-			matchingLines = list(set(elt_matchingLines+matchingLines))
-		else:
-			matchingLines = list(set(elt_matchingLines) & set(matchingLines))
+	if(or_flag):
+		matchingLines = filter (lambda (line):
+			(set(search_array).intersection(line.lower().split(" "))), data)
+	else:
+		matchingLines = filter (lambda (line):
+			(len(set(search_array).intersection(line.lower().split(" "))) == len(search_array)), data)
 	return matchingLines
 		
+def consecutive_words_filter (search_array, data):
+	#Returns all the lines who match the search_array in consecutive order.
+	search_array = map(str.lower, search_array)
+	matchingLines = []
+	for line in data:
+		append = True
+		line_words = line.lower().split(' ')
+		if search_array[0] in line_words:
+			initial_index = line_words.index(search_array[0])
+			for i in range(len(search_array) - 1):
+				if (line_words[initial_index+1+i]!=search_array[i+1]):
+					append = False
+					break
+		else: 
+			append = False
+		if(append):
+			matchingLines.append(line)
+	return matchingLines
+
+def multiple_consecutive_words_filter(search_arrays, data):
+	#Returns all the lines that match any of the search_arrays in consecutive order.
+	matchingLines = []
+	for search_array in search_arrays:
+		matchingLines+=consecutive_words_filter(search_array, data)
+	return list(set(matchingLines))
+
+
+
 def isQuotn(elt):
 	return ((elt == "``") | (elt == "''") | (elt == "`") | (elt == "'") | (elt == "\""))
 
@@ -76,24 +135,7 @@ def printResults(inp_word_list, tweet, st, end):
 	result = tweet[tweet_start:tweet_end]
 	return result
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
-
-GG_tweet_id = "18667907"
-
-keywords = keywords("keywords.txt")
-congrats_words = ["Congratulations", "congratulations", "congrats"]
-win_words = ["wins", "won", "winning", "winner"]
-
-tweets = list(open("goldenglobes.tab","r"))
-
-GG_tweets = useful_filter([GG_tweet_id], tweets)
-
-awards = useful_filter(["congratulations"], GG_tweets)
-
-host_GG_tweets = useful_filter(["host"], GG_tweets)
-presenter_GG_tweets = useful_filter(["present"], GG_tweets)
-
-def tweet_comprehension(tweet):
+def get_winner(tweet):
 	word_list = nltk.word_tokenize(tweet)
 	lower_word_list = map(str.lower, word_list)
 	congrats_index, win_index, win_word = None, None, None
@@ -141,29 +183,52 @@ def tweet_comprehension(tweet):
 	elif (win_index!=None):
 			print "tbd"
 
-def runTests():
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
+
+GG_tweet_id = "18667907"
+
+# keywords = keywords("keywords.txt")
+congrats_words = ["Congratulations", "congratulations", "congrats"]
+win_words = ["wins", "won", "winning", "winner"]
+
+adjectives = ["animated", "best", "feature", "lead", "made", "motion", "original", "starring", "supporting"]
+genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
+grammar = ["a", "for", "in", "or"]
+medium = ["film", "miniseries", "mini", "movie", "play", "series", "show", "television", "TV"]
+subject = ["actor", "achievement", "actress", "performance", "picture", "screenplay", "score", "script", "series","song"]
+
+#Note series is both a medium & a subject
+
+tweets = list(open("goldenglobes.tab","r"))
+
+GG_tweets = number_filter([GG_tweet_id], tweets)
+awards = word_filter(["congratulations"], GG_tweets)
+host_GG_tweets = word_filter(["host"], GG_tweets)
+presenter_GG_tweets = word_filter(["present"], GG_tweets)
+
+nominee_tweets_v1 = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
+
+
+def get_award(tweet):
+	word_list = nltk.word_tokenize(tweet)
+	lower_word_list = map(str.lower, word_list)
+
+	best_index = None
+	if("best" in lower_word_list):
+		best_index = lower_word_list.index("best")
+
+def useWord_Award(index, tweet): #Returns a bool based on whether or not we should use
+	# the word as part of the Award Name.
+	token = tweet[index]
+	if ((token == "or") | (token == "in") | ((token == "a")&(tweet[index-1] == "in"))):
+		return True
+	elif (token in Genre):
+		return True
+
+def run_Names_Tests():
 	for i in awards:
 		print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		print i
-		a = tweet_comprehension(i)		
+		a = get_winner(i)		
 		print "winner is: ", a
 		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
