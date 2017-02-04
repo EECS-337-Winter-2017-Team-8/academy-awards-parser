@@ -2,58 +2,6 @@ import operator
 import enchant
 import nltk
 
-# def associate_words(words, word_co_occurrence_dict):
-#     words.sort()
-#     for word in words:
-#         if word_co_occurrence_dict.has_key(word):
-#             word_co_occurrence_counts = word_co_occurrence_dict[word]
-#         else:
-#             word_co_occurrence_counts = {}
-#         for co_occurring_word in words:
-#             dictIncrement(word_co_occurrence_counts, co_occurring_word)
-#         word_co_occurrence_dict[word] = word_co_occurrence_counts
-#     return word_co_occurrence_dict
-
-# def get_frequencies(filename):
-#     parsed_tweets = tweets(filename)
-#     words_lists = get_words(parsed_tweets)
-#     wcod = {}
-#     for words in words_lists:
-#         wcod = associate_words(words, wcod)
-#     return wcod
-
-# def dictIncrement(d, k):
-#    """ Increments the value stored for a key. """
-#    if d.has_key(k):
-#       temp = {k: d.pop(k) + 1}
-#       d.update(temp)
-#    else:
-#       temp = {k: 1}
-#       d.update(temp)
-
-# def sort_dict(freq_dict):
-#     sorted_freqs = sorted(freq_dict.items(), key=operator.itemgetter(1))
-#     return sorted_freqs
-
-# def get_single_word_associations(query_string, search_texts):
-#     single_word_associations = {}
-#     query_words = query_string.split(' ')
-#     for text in search_texts:
-#         if query_string in text:
-#             for word in text.split(' '):
-#                 if word not in query_words:
-#                     dictIncrement(single_word_associations, word)
-#     return single_word_associations
-
-# def query(frequency_dict, query_string, search_texts):
-#     if frequency_dict.has_key(query_string):
-#         return frequency_dict[query_string]
-#     temp = {query_string: get_single_word_associations(query_string, search_texts)}
-#     frequency_dict.update(temp)
-#     return frequency_dict
-
-##########
-
 def get_tweets(filename):
     tweets = []
     with open(filename) as f:
@@ -62,6 +10,38 @@ def get_tweets(filename):
 
 def get_texts(tweets):
     return [tweet[0] for tweet in tweets]
+
+## bad function - no use without fix
+def get_phrase_correllation(texts, phrase, phrase_scores, phrase_lengths):
+    phrase_texts = [text for text in texts if phrase in text]
+    phrase_scores_given_phrase = get_multi_phrase_scores(phrase_texts,
+                                                         phrase_lengths)
+    return {other_phrase:
+            (float(dict_get(phrase_scores_given_phrase, other_phrase)) /
+             dict_get(phrase_scores, other_phrase))
+            for other_phrase in phrase_scores}
+
+def get_phrase_occurances_in_common(texts, phrase_1, phrase_2):
+
+
+def get_multi_phrase_scores(texts, phrase_lengths):
+    phrase_scores = {}
+    for phrase_length in phrase_lengths:
+        phrase_scores.update(get_phrase_scores(texts, phrase_length))
+    return phrase_scores
+
+def get_phrase_scores(texts, phrase_length):
+    phrase_scores = {}
+    for text in texts:
+        for phrase in get_phrases(text, phrase_length):
+            dict_add(phrase_scores, phrase, phrase_length)
+    return phrase_scores
+
+def get_multi_phrase_counts(texts, phrase_lengths):
+    phrase_counts = {}
+    for phrase_length in phrase_lengths:
+        phrase_counts.update(get_phrase_counts(texts, phrase_length))
+    return phrase_counts
 
 def get_phrase_counts(texts, phrase_length):
     phrase_counts = {}
@@ -87,6 +67,20 @@ def get_phrases(text, phrase_length):
     return [' '.join(word_list[index : index + phrase_length])
             for index in range(end_index)]
 
+def dict_get(d, k):
+    if d.has_key(k):
+        return d[k]
+    else:
+        return 1
+
+def dict_add(d, k, n):
+    if d.has_key(k):
+        temp = {k: d.pop(k) + n}
+        d.update(temp)
+    else:
+        temp = {k: n}
+        d.update(temp)
+
 def dict_increment(d, k):
    if d.has_key(k):
       temp = {k: d.pop(k) + 1}
@@ -98,3 +92,6 @@ def dict_increment(d, k):
 def sort_dict(freq_dict):
     sorted_freqs = sorted(freq_dict.items(), key=operator.itemgetter(1))
     return sorted_freqs
+
+
+ggtexts = get_texts(get_tweets("goldenglobes.tab"))
