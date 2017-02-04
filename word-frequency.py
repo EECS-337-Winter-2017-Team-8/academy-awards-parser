@@ -30,17 +30,17 @@ def get_phrase_builder(texts, phrase, threshold = 0.15):
                                        [len(get_word_list(phrase)) + 1])
     best = sort_dict(candidates)
     best.reverse()
+    queue = []
+    phrase_builders = []
     for candidate in best:
         if candidate[1] > threshold:
             phrase_builder = get_phrase_builder(texts, candidate[0], threshold)
-            for bigger_phrase in phrase_builder:
-                yield bigger_phrase
+            phrase_builders.append(phrase_builder)
     actual_content = phrase.split(':')[-1]
     if actual_content not in used_phrases:
         used_phrases.append(actual_content)
         print used_phrases
         yield actual_content
-
 
 def get_probability_given(texts, phrase, phrase_lengths):
     intersect_counts = get_intersect_counts(texts, phrase, phrase_lengths)
