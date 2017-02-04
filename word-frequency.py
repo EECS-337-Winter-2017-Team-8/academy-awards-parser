@@ -13,27 +13,34 @@ def get_texts(tweets):
 def remove_retweets(texts):
     return [text for text in texts if "RT" not in text]
 
-# # messy no work good function - please fix thanks
-# def get_most_important_associations(texts, phrase_lengths):
-#     scores = get_multi_phrase_scores(texts, phrase_lengths)
-#     top_word_scores = sort_dict(scores)[-20:]
-#     matches = {word_score[0]:
-#                sort_dict(get_phrase_occurrences_in_common(texts, word_score[0], phrase_lengths))[-5:]
-#                for word_score in top_word_scores}
-#     return matches
+def test_phrase_builder():
+    phrase_builder = get_phrase_builder(ggtexts, "Best", threshold = 0.15)
+    i = 0
+    for phrase in phrase_builder:
+        print(phrase)
+        i += 1
+        if i > 1000:
+            break
 
-def build_phrases(texts, phrase, threshold = 0.2):
-    build_phrase(texts, phrase, threshold)
-    
+used_phrases = []
 
-def build_phrase(texts, phrase, threshold = 0.2):
+def get_phrase_builder(texts, phrase, threshold = 0.15):
+    global used_phrases
     candidates = get_probability_given(texts, phrase,
                                        [len(get_word_list(phrase)) + 1])
-    best = sort_dict(candidates)[randint(-3, -2)]
-    if best[1] > threshold:
-        return build_phrase(texts, best[0], threshold)
-    else:
-        return phrase
+    best = sort_dict(candidates)
+    best.reverse()
+    for candidate in best:
+        if candidate[1] > threshold:
+            phrase_builder = get_phrase_builder(texts, candidate[0], threshold)
+            for bigger_phrase in phrase_builder:
+                yield bigger_phrase
+    actual_content = phrase.split(':')[-1]
+    if actual_content not in used_phrases:
+        used_phrases.append(actual_content)
+        print used_phrases
+        yield actual_content
+
 
 def get_probability_given(texts, phrase, phrase_lengths):
     intersect_counts = get_intersect_counts(texts, phrase, phrase_lengths)
