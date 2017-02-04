@@ -434,6 +434,8 @@ def handle_genre(tweet_segment, offset):
 					return offset, 1+offset
 			else:
 				return offset, offset+1
+		else:
+			return None, None
 	elif((length>=3) & (next_word == "language") & (tweet_segment[2] in subjects)):
 		if((length>=5) & (tweet_segment[3] == "-" ) & (tweet_segment[4] in genres)):
 			w_st, w_end = handle_genre(tweet_segment[3:], 4)
@@ -587,9 +589,9 @@ def run_Nom_Tests():
 	for tweet in n_tweets:
 		try:
 			a = get_award(tweet)
-			print tweet
-			print a
-			print "~~~~~~~~~~~~~~~~~~~~~~~~"
+			# print tweet
+			# print a
+			# print "~~~~~~~~~~~~~~~~~~~~~~~~"
 		except:
 			print "FAILED:", tweet
 			print "~~~~~~~~~~~~~~~~~~~~~~~~"
