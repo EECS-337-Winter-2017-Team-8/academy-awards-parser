@@ -21,12 +21,26 @@ def get_unique_phrase_builder(texts, seed_phrase, threshold = 0.15):
     used_phrases = []
     while True:
         phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
-        built_phrase = next(phrase_builder)
+        built_phrase = strip_retweet_header(next(phrase_builder))
         while built_phrase in used_phrases:
             phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
-            built_phrase = next(phrase_builder)
+            built_phrase = strip_retweet_header(next(phrase_builder))
         used_phrases.append(built_phrase)
         yield built_phrase
+
+def strip_retweet_header(phrase):
+    words = get_word_list(phrase)
+    clean_start_index = 0
+    for index, word in enumerate(words):
+        if word.strip() == 'RT':
+            for i, w in enumerate(words[index:]):
+                if w[-1] == ':':
+                    clean_start_index = i
+                    break
+    clean_word_list = words[clean_start_index:]
+    return " ".join(clean_word_list)
+
+
 
 def get_phrase_builder(texts, phrase, threshold = 0.15):
     global used_phrases
