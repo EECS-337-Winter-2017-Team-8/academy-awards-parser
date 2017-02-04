@@ -22,77 +22,46 @@ def remove_retweets(texts):
 #                for word_score in top_word_scores}
 #     return matches
 
-def get_correlations(texts, phrase_lengths):
-    phrase_occurances = get_multi_phrase_counts(texts, phrase_lengths)
-    return {phrase[0]: sort_dict(
-        remove_overlap(phrase[0],
-                       get_conditional_probability(texts, phrase[0],
-                                                   phrase_lengths)))[-2:]
-            for phrase in sort_dict(phrase_occurances)[-20:]}
-
-
 def build_phrases(texts, phrase, threshold = 0.2):
     build_phrase(texts, phrase, threshold)
     
 
 def build_phrase(texts, phrase, threshold = 0.2):
-    candidates = get_conditional_probability(texts, phrase,
-                                             [len(get_word_list(phrase)) + 1])
+    candidates = get_probability_given(texts, phrase,
+                                       [len(get_word_list(phrase)) + 1])
     best = sort_dict(candidates)[randint(-3, -2)]
     if best[1] > threshold:
         return build_phrase(texts, best[0], threshold)
     else:
         return phrase
 
-def get_conditional_probability(texts, phrase, phrase_lengths):
-    candidate_counts = get_phrases_intersect_count(texts, phrase, phrase_lengths)
+def get_probability_given(texts, phrase, phrase_lengths):
+    intersect_counts = get_intersect_counts(texts, phrase, phrase_lengths)
+    phrase_count = get_phrase_count(texts, phrase)
+    return {phrase_2:
+            (float(dict_try(intersect_counts, phrase_2, 0)) / phrase_count)
+            for phrase_2 in intersect_counts}
+
+def get_phrase_count(texts, phrase):
     phrase_count = 0
     for text in texts:
         if phrase in text:
             phrase_count += 1
-    return {phrase_2: (float(dict_get(candidate_counts, phrase_2, 0)) /
-                       phrase_count)
-            for phrase_2 in candidate_counts}
+    return phrase_count
 
-def get_phrases_intersect_count(texts, phrase, phrase_lengths):
+def get_intersect_counts(texts, phrase, allowed_phrase_lengths):
     phrase_texts = [text for text in texts if phrase in text]
-    occurrences_in_common = get_multi_phrase_counts(phrase_texts,
-                                                    phrase_lengths)
+    occurrences_in_common = get_phrase_counts(phrase_texts,
+                                              allowed_phrase_lengths)
     return occurrences_in_common
 
-def get_multi_phrase_scores(texts, phrase_lengths):
-    phrase_scores = {}
-    for phrase_length in phrase_lengths:
-        phrase_scores.update(get_phrase_scores(texts, phrase_length))
-    return phrase_scores
-
-def get_phrase_scores(texts, phrase_length):
-    phrase_scores = {}
-    for text in texts:
-        for phrase in get_phrases(text, phrase_length):
-            dict_add(phrase_scores, phrase, phrase_length)
-    return phrase_scores
-
-def get_multi_phrase_counts(texts, phrase_lengths):
+def get_phrase_counts(texts, allowed_phrase_lengths):
     phrase_counts = {}
-    for phrase_length in phrase_lengths:
-        phrase_counts.update(get_phrase_counts(texts, phrase_length))
+    for phrase_length in allowed_phrase_lengths:
+        for text in texts:
+            for phrase in get_phrases(text, phrase_length):
+                dict_increment(phrase_counts, phrase, 1)
     return phrase_counts
-
-def get_phrase_counts(texts, phrase_length):
-    phrase_counts = {}
-    for text in texts:
-        for phrase in get_phrases(text, phrase_length):
-            dict_increment(phrase_counts, phrase)
-    return phrase_counts
-
-def get_phrase_associations(query_string, search_texts, phrase_length):
-    phrase_associations = {}
-    for search_text in search_texts:
-        if query_string in search_text:
-            for phrase in get_phrases(search_text, phrase_length):
-                dict_increment(phrase_associations, phrase)
-    return phrase_associations
 
 def get_word_list(text):
     return text.split(' ')
@@ -110,27 +79,19 @@ def remove_overlap(phrase, phrase_scores):
                 phrase_scores.update({key: 0})
     return phrase_scores
 
-def dict_get(d, k, otherwise):
+def dict_try(d, k, otherwise):
     if d.has_key(k):
         return d[k]
     else:
         return otherwise
 
-def dict_add(d, k, n):
+def dict_increment(d, k, n):
     if d.has_key(k):
         temp = {k: d.pop(k) + n}
         d.update(temp)
     else:
         temp = {k: n}
         d.update(temp)
-
-def dict_increment(d, k):
-   if d.has_key(k):
-      temp = {k: d.pop(k) + 1}
-      d.update(temp)
-   else:
-      temp = {k: 1}
-      d.update(temp)
 
 def sort_dict(freq_dict):
     sorted_freqs = sorted(freq_dict.items(), key=operator.itemgetter(1))
