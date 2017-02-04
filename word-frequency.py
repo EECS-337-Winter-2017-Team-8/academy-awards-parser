@@ -1,5 +1,5 @@
 import operator
-from random import randint
+import random
 
 def get_tweets(filename):
     tweets = []
@@ -13,34 +13,51 @@ def get_texts(tweets):
 def remove_retweets(texts):
     return [text for text in texts if "RT" not in text]
 
-def test_phrase_builder():
-    phrase_builder = get_phrase_builder(ggtexts, "Best", threshold = 0.15)
-    i = 0
-    for phrase in phrase_builder:
-        print(phrase)
-        i += 1
-        if i > 1000:
-            break
+def yank_phrases(number, texts, phrase, threshold = 0.15):
+    phrase_builder = get_unique_phrase_builder(texts, phrase, threshold)
+    return [next(phrase_builder) for index in range(number)]
 
-used_phrases = []
+def get_unique_phrase_builder(texts, seed_phrase, threshold = 0.15):
+    used_phrases = []
+    while True:
+        phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
+        built_phrase = next(phrase_builder)
+        while built_phrase in used_phrases:
+            phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
+            built_phrase = next(phrase_builder)
+        used_phrases.append(built_phrase)
+        yield built_phrase
 
 def get_phrase_builder(texts, phrase, threshold = 0.15):
     global used_phrases
     candidates = get_probability_given(texts, phrase,
                                        [len(get_word_list(phrase)) + 1])
-    best = sort_dict(candidates)
-    best.reverse()
-    queue = []
-    phrase_builders = []
-    for candidate in best:
-        if candidate[1] > threshold:
-            phrase_builder = get_phrase_builder(texts, candidate[0], threshold)
-            phrase_builders.append(phrase_builder)
-    actual_content = phrase.split(':')[-1]
-    if actual_content not in used_phrases:
-        used_phrases.append(actual_content)
-        print used_phrases
-        yield actual_content
+    candidates = {candidate: candidates[candidate]
+                  for candidate in candidates
+                  if candidates[candidate] > threshold}
+    if candidates:
+        yield next(get_phrase_builder(texts,
+                                      choose_event(candidates),
+                                      threshold))
+    else:
+        yield phrase
+
+def choose_event(weights):
+    sum = 0
+    for event in weights:
+        sum += weights[event]
+    return choose_weighted({event: (weights[event] / sum)
+                            for event in weights})
+
+def choose_weighted(probabilities):
+    # Probabilities must be normalized (i.e., sum to one)
+    pointer = random.random()
+    running_sum = 0
+    for event in probabilities:
+        running_sum += probabilities[event]
+        if running_sum > pointer:
+            return event
+
 
 def get_probability_given(texts, phrase, phrase_lengths):
     intersect_counts = get_intersect_counts(texts, phrase, phrase_lengths)
