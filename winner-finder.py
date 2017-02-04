@@ -131,9 +131,21 @@ def handle_name(tweet_segment, offset):
 		return None, None
 
 def printResults(inp_word_list, tweet, st, end):
-	tweet_start = tweet.index(inp_word_list[st])
-	tweet_end = tweet_start + 1+ tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
-	result = tweet[tweet_start:tweet_end]
+	start_word = inp_word_list[st]
+	if(tweet.count(start_word)>1):
+		number_of_preceding_bests = inp_word_list[:st].count(start_word)
+		if(number_of_preceding_bests == 0):
+			new_tweet = tweet
+		else:	
+			for i in range(number_of_preceding_bests):
+				new_tweet = tweet[tweet.index(start_word) + len(start_word):]
+		tweet_start = new_tweet.index(inp_word_list[st])
+		tweet_end = tweet_start + 1+ new_tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
+		result = new_tweet[tweet_start:tweet_end]
+	else:
+		tweet_start = tweet.index(inp_word_list[st])
+		tweet_end = tweet_start + 1+ tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
+		result = tweet[tweet_start:tweet_end]
 	return result
 
 def get_winner(tweet):
@@ -207,9 +219,9 @@ adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made
 genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
 grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or"]
 media = ["play", "series", "show", "television", "tv"]
-subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "documentary", "editing", "effects", "film",  "hair", "hairstyling", 
-			"hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", "score", "script", 
-			"series","song", "sound", "writing"]
+subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "director", "documentary", "editing", "effects", "film",  "hair", 
+			"hairstyling", "hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", 
+			"score", "script", "series","song", "sound", "writing"]
 extra = ["language", "subject"]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
@@ -221,30 +233,34 @@ extra = ["language", "subject"]
 
 # nominee_tweets_v1 = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
 
-
+# indices = [i for i, x in enumerate(my_list) if x == "whatever"]
+#best_indices = [i for i, x in enumerate(lower_word_list) if x == "best"]
 def get_award(tweet):
 	word_list = nltk.word_tokenize(tweet)
 	lower_word_list = map(str.lower, word_list)
 	best_index = None
 	if("best" in lower_word_list):
-		best_index = lower_word_list.index("best")
-		next_word = lower_word_list[best_index+1]
-		if(next_word in subjects):
-			w_st, w_end = handle_subject(lower_word_list[best_index+1:],best_index+1) #Input is tweet cut AFTER best  
-			# print (word_list[best_index: w_end])
-		elif(next_word in adjectives):
-			w_st, w_end = handle_adjective(lower_word_list[best_index+1:],best_index+1)
-		elif(next_word in media):
-			w_st, w_end = handle_media(lower_word_list[best_index+1:],best_index+1)
-		elif(next_word in genres):
-			w_st, w_end = handle_genre(lower_word_list[best_index+1:],best_index+1)
-		# elif(next_word in grammar):
+		best_indices = [i for i, x in enumerate(lower_word_list) if x == "best"]
+		for best_index in best_indices:
+		# best_index = lower_word_list.index("best")
+			next_word = lower_word_list[best_index+1]
+			if(next_word in subjects):
+				w_st, w_end = handle_subject(lower_word_list[best_index+1:],best_index+1) #Input is tweet cut AFTER best  
+				# print (word_list[best_index: w_end])
+			elif(next_word in adjectives):
+				w_st, w_end = handle_adjective(lower_word_list[best_index+1:],best_index+1)
+			elif(next_word in media):
+				w_st, w_end = handle_media(lower_word_list[best_index+1:],best_index+1)
+			elif(next_word in genres):
+				w_st, w_end = handle_genre(lower_word_list[best_index+1:],best_index+1)
+			else:
+				w_st, w_end = None, None
 
-		# elif(next_word in media):
-
-		else:
-			w_st, w_end = None, None #set this way temporarily.
-		return printResults(map(correctParanthesis, word_list), tweet, best_index, w_end-1)
+			if(w_end):
+				return printResults(map(correctParanthesis, word_list), tweet, best_index, w_end-1)
+			else:
+				continue
+	return None
 
 def handle_subject(tweet_segment, offset):	
 	end, length = 0, len(tweet_segment)
@@ -265,7 +281,6 @@ def handle_subject(tweet_segment, offset):
 			#SUBJECT + AND + SUBJECT
 			w_st, w_end = handle_genre(tweet_segment[3:],offset+3)
 			return offset, w_end
-
 		elif ((next_word == "in") & (after_next_word == "a")&(length>=5)):
 			next_word, after_next_word = tweet_segment[3], tweet_segment[4]
 			if((next_word in adjectives)&(after_next_word in subjects)):
@@ -284,7 +299,11 @@ def handle_subject(tweet_segment, offset):
 				else:
 					start_g, end_g = handle_genre(tweet_segment[5:], 5)
 				return offset, end_g+offset
-	
+			elif((next_word in genres)):
+				if(after_next_word in subjects):
+					return offset, offset+5
+				else:
+					return offset, offset+4
 		elif ((next_word == "or") & (after_next_word in adjectives) & (length>=5)):
 			next_word, after_next_word = tweet_segment[3], tweet_segment[4]
 			if((next_word in subjects) & (after_next_word in adjectives) & (length>=7)):
@@ -292,7 +311,37 @@ def handle_subject(tweet_segment, offset):
 				if((next_word =="for") & (after_next_word in media)):
 					w_st, w_end = handle_genre(tweet_segment[7:],offset+7)
 					return offset, w_end
-
+		elif ((next_word == "by") & ((after_next_word == "a")|(after_next_word == "an")) & (length>=5)):
+			next_word, after_next_word = tweet_segment[3], tweet_segment[4]
+			if(next_word in subjects):
+				if((after_next_word == "in") & (length>=7)):
+					next_word, after_next_word = tweet_segment[5], tweet_segment[6]
+					if((next_word =="a")|(next_word=="an")):
+						if(after_next_word in subjects):
+							w_st, w_end = handle_genre(tweet_segment[7:],offset+7)
+							return offset, w_end
+						elif(((after_next_word in adjectives) | (after_next_word in media))&(length>=8)):
+							next_word = tweet_segment[7]
+							if(next_word in subjects):
+								w_st, w_end = handle_genre(tweet_segment[8:],offset+8)
+								return offset, w_end
+						else: return offset, offset
+					elif((next_word in subjects)|(next_word in media)):
+						if((after_next_word == ",") | (after_next_word == "or") & (length>=8)):
+							iterator = 7
+							while( (tweet_segment[iterator]==",")|(tweet_segment[iterator]=="or")|(tweet_segment[iterator] in media)|(tweet_segment[iterator] in subjects)):
+								iterator+=1
+							w_st, w_end = handle_genre(tweet_segment[iterator:],offset+iterator)
+							return offset, w_end
+						w_st, w_end = handle_genre(tweet_segment[6:],offset+6)
+						return 
+					elif(next_word in genres):
+						if(after_next_word in subjects):
+							return offset, offset+7
+						else:
+							return offset, offset+6
+				else: return offset, offset					
+			else: return offset, offset
 		elif ((next_word == "(")):
 			if(after_next_word in adjectives):
 				if(length>=5):
@@ -311,26 +360,35 @@ def handle_subject(tweet_segment, offset):
 						w_st, w_end = handle_genre(tweet_segment[4:],offset+4)
 						return offset, w_end
 						# return start + offset, end + offset + 4
-	
-		elif ((next_word == "by") & ((after_next_word == "a")|(after_next_word == "an")) & (length>=5)):
+			else:
+				iterator=3
+				while(tweet_segment[iterator]!=")"):
+					iterator+=1
+				w_st, w_end = handle_genre(tweet_segment[iterator+1:],offset+iterator+1)
+				return offset, w_end
+
+		else:
+			w_st, w_end = handle_genre(tweet_segment[1:],offset+1)
+			return offset, w_end	
+	elif ((next_word == "-") & (length>=5)):
+		if(after_next_word in genres):
+			w_st, w_end = handle_genre(tweet_segment[1:],offset+1)	
+			return offset, w_end
+		elif(after_next_word in subjects):
 			next_word, after_next_word = tweet_segment[3], tweet_segment[4]
-			if(next_word in subjects):
-				if((after_next_word == "in") & (length>=7)):
-					next_word, after_next_word = tweet_segment[5], tweet_segment[6]
-					if((next_word =="a")|(next_word=="an")):
-						if(after_next_word in subjects):
-							w_st, w_end = handle_genre(tweet_segment[7:],offset+7)
-							return offset, w_end
-						elif(((after_next_word in adjectives) | (after_next_word in media))&(length>=8)):
-							next_word = tweet_segment[7]
-							if(next_word in subjects):
-								w_st, w_end = handle_genre(tweet_segment[8:],offset+8)
-								return offset, w_end
-						else: return offset, offset
-				else: return offset, offset					
-			else: return offset, offset
-	# elif(next_word in medium):
-	# elif(next_word in extra):
+			if(next_word == "or"):
+				if (after_next_word in media):
+					next_word = tweet_segment[5]
+					if(next_word in subjects):
+						w_st, w_end = handle_genre(tweet_segment[6:],offset+6)
+						return offset, w_end
+					else:
+						return offset, offset+6
+				elif (after_next_word in subjects):
+					w_st, w_end = handle_genre(tweet_segment[5:],offset+5)
+					return offset, w_end
+		else:
+			return offset, offset+1
 	else:
 		w_st, w_end = handle_genre(tweet_segment[1:],offset+1)
 		return offset, w_end
@@ -367,10 +425,21 @@ def handle_genre(tweet_segment, offset):
 		elif(next_word in subjects):
 			w_st, w_end = handle_genre(tweet_segment[2:],offset+2)
 			return offset, w_end
+		elif((next_word in grammar) & (length>=4)):
+			if(next_word == "or"):
+				after_next_word = tweet_segment[2]
+				if(after_next_word in genres):
+					return offset, 3+offset 
+				else:
+					return offset, 1+offset
+			else:
+				return offset, offset+1
 	elif((length>=3) & (next_word == "language") & (tweet_segment[2] in subjects)):
 		if((length>=5) & (tweet_segment[3] == "-" ) & (tweet_segment[4] in genres)):
 			w_st, w_end = handle_genre(tweet_segment[3:], 4)
 			return offset, w_end+offset
+		else:
+			return offset, 3+offset
 	else:
 		return offset, offset
 
@@ -379,12 +448,12 @@ def handle_adjective(tweet_segment, offset):
 	if(length>=2):
 		if(tweet_segment[1] in subjects): #If we have Adjective + Subject ->
 			if(length>=4):
-				if((tweet_segment[2] == "-") & (tweet_segment[3] in adjectives)):
-					#Adjective + Subject + "-" + Adjective + Subject
-					return offset, + 5+offset
-				elif((tweet_segment[2] == "-")):
-					g_st, g_end = handle_genre(tweet_segment[2:], 2)
-					return 0, g_end+offset
+				if(tweet_segment[2] == "-"):
+					if (tweet_segment[3] in adjectives):
+						return offset, + 5+offset
+					else:
+						g_st, g_end = handle_genre(tweet_segment[2:], 2)
+						return 0, g_end+offset
 				elif((tweet_segment[2] == "in") & (tweet_segment[3] == "a")):
 					if (length>=6):
 						if((tweet_segment[4] in media) & (tweet_segment[5] in subjects)):
@@ -406,11 +475,14 @@ def handle_adjective(tweet_segment, offset):
 							return offset, offset+ 5
 					else:
 						return offset, offset+5
+				elif(tweet_segment[2] in genres):
+					w_st, w_end = handle_genre(tweet_segment[2:], offset+2)
+					return offset, w_end
 				else:
-					return offset, 3+offset
+					return offset, 2+offset
 			else:
 				#Adjective + Subject
-				return offset, 3+offset
+				return offset, 2+offset
 		
 		elif((length>=3)&(tweet_segment[1] in adjectives) & (tweet_segment[2] in subjects)):
 			w_st, w_end = handle_genre(tweet_segment[3:], offset+3)
@@ -425,11 +497,16 @@ def handle_media(tweet_segment, offset):
 	if((length>=2) & (tweet_segment[1] in subjects)):
 		if(length>=4):
 			if (tweet_segment[2] in subjects):
-				w_st, w_end = handle_genre(tweet_segment[3:], 3)
-				return 0, w_end+offset
+				w_st, w_end = handle_genre(tweet_segment[3:], 3+offset)
+				return 0, w_end
 			elif (tweet_segment[2] == "-"):
-				w_st, w_end = handle_genre(tweet_segment[2:], 2)
-				return 0, w_end+offset
+				w_st, w_end = handle_genre(tweet_segment[2:], 2+offset)
+				return 0, w_end
+			elif (tweet_segment[2] in grammar):
+				if(tweet_segment[2] == "or"):
+					if(tweet_segment[3] in subjects):
+						w_st, w_end = handle_genre(tweet_segment[4:], 4+offset)
+						return 0, w_end
 	return 0,0
 
 def useWord_Award(index, tweet): #Returns a bool based on whether or not we should use
@@ -437,7 +514,7 @@ def useWord_Award(index, tweet): #Returns a bool based on whether or not we shou
 	token = tweet[index]
 	if ((token == "or") | (token == "in") | ((token == "a")&(tweet[index-1] == "in"))):
 		return True
-	elif (token in Genre):
+	elif (token in genres):
 		return True
 
 def get_noms_and_awards():
@@ -505,6 +582,20 @@ def run_Awards_Tests():
 		except:
 			print "FAILED:", i
 			continue
+
+def run_Nom_Tests():
+	for tweet in n_tweets:
+		try:
+			a = get_award(tweet)
+			print tweet
+			print a
+			print "~~~~~~~~~~~~~~~~~~~~~~~~"
+		except:
+			print "FAILED:", tweet
+			print "~~~~~~~~~~~~~~~~~~~~~~~~"
+			continue
+
+n_tweets = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
 
 extensive_awards_tweets = ["Congratulations to Moonlight (@moonlightmov) - Best Motion Picture - Drama - #GoldenGlobes https://t.co/NqBZd5uBso	Golden Globe Awards	18667907	818306803750420480	2017-01-09 04:02:00",
 "Congratulations to Isabelle Huppert - Best Actress in a Motion Picture - Drama - Elle - #GoldenGlobes https://t.co/wrkbydAtoL	Golden Globe Awards	18667907	818305939107434496	2017-01-09 03:58:33",
