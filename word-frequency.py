@@ -1,4 +1,5 @@
 import operator
+from random import randint
 
 def get_tweets(filename):
     tweets = []
@@ -21,14 +22,42 @@ def remove_retweets(texts):
 #                for word_score in top_word_scores}
 #     return matches
 
-def get_conditional_probability(texts, phrase, phrase_counts):
+def get_correlations(texts, phrase_lengths):
+    phrase_occurances = get_multi_phrase_counts(texts, phrase_lengths)
+    return {phrase[0]: sort_dict(
+        remove_overlap(phrase[0],
+                       get_conditional_probability(texts, phrase[0],
+                                                   phrase_lengths)))[-2:]
+            for phrase in sort_dict(phrase_occurances)[-20:]}
+
+
+def build_phrases(texts, phrase, threshold = 0.2):
+    build_phrase(texts, phrase, threshold)
     
 
-def get_phrase_occurrences_in_common(texts, phrase, phrase_lengths):
+def build_phrase(texts, phrase, threshold = 0.2):
+    candidates = get_conditional_probability(texts, phrase,
+                                             [len(get_word_list(phrase)) + 1])
+    best = sort_dict(candidates)[randint(-3, -2)]
+    if best[1] > threshold:
+        return build_phrase(texts, best[0], threshold)
+    else:
+        return phrase
+
+def get_conditional_probability(texts, phrase, phrase_lengths):
+    candidate_counts = get_phrases_intersect_count(texts, phrase, phrase_lengths)
+    phrase_count = 0
+    for text in texts:
+        if phrase in text:
+            phrase_count += 1
+    return {phrase_2: (float(dict_get(candidate_counts, phrase_2, 0)) /
+                       phrase_count)
+            for phrase_2 in candidate_counts}
+
+def get_phrases_intersect_count(texts, phrase, phrase_lengths):
     phrase_texts = [text for text in texts if phrase in text]
     occurrences_in_common = get_multi_phrase_counts(phrase_texts,
                                                     phrase_lengths)
-    remove_overlap(phrase, occurrences_in_common)
     return occurrences_in_common
 
 def get_multi_phrase_scores(texts, phrase_lengths):
@@ -81,11 +110,11 @@ def remove_overlap(phrase, phrase_scores):
                 phrase_scores.update({key: 0})
     return phrase_scores
 
-def dict_get(d, k):
+def dict_get(d, k, otherwise):
     if d.has_key(k):
         return d[k]
     else:
-        return 1
+        return otherwise
 
 def dict_add(d, k, n):
     if d.has_key(k):
