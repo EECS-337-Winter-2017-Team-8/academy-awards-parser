@@ -1,6 +1,4 @@
 import operator
-import enchant
-import nltk
 
 def get_tweets(filename):
     tweets = []
@@ -11,18 +9,27 @@ def get_tweets(filename):
 def get_texts(tweets):
     return [tweet[0] for tweet in tweets]
 
-## bad function - no use without fix
-def get_phrase_correllation(texts, phrase, phrase_scores, phrase_lengths):
+def remove_retweets(texts):
+    return [text for text in texts if "RT" not in text]
+
+# # messy no work good function - please fix thanks
+# def get_most_important_associations(texts, phrase_lengths):
+#     scores = get_multi_phrase_scores(texts, phrase_lengths)
+#     top_word_scores = sort_dict(scores)[-20:]
+#     matches = {word_score[0]:
+#                sort_dict(get_phrase_occurrences_in_common(texts, word_score[0], phrase_lengths))[-5:]
+#                for word_score in top_word_scores}
+#     return matches
+
+def get_conditional_probability(texts, phrase, phrase_counts):
+    
+
+def get_phrase_occurrences_in_common(texts, phrase, phrase_lengths):
     phrase_texts = [text for text in texts if phrase in text]
-    phrase_scores_given_phrase = get_multi_phrase_scores(phrase_texts,
-                                                         phrase_lengths)
-    return {other_phrase:
-            (float(dict_get(phrase_scores_given_phrase, other_phrase)) /
-             dict_get(phrase_scores, other_phrase))
-            for other_phrase in phrase_scores}
-
-def get_phrase_occurances_in_common(texts, phrase_1, phrase_2):
-
+    occurrences_in_common = get_multi_phrase_counts(phrase_texts,
+                                                    phrase_lengths)
+    remove_overlap(phrase, occurrences_in_common)
+    return occurrences_in_common
 
 def get_multi_phrase_scores(texts, phrase_lengths):
     phrase_scores = {}
@@ -66,6 +73,13 @@ def get_phrases(text, phrase_length):
     end_index = len(word_list) - phrase_length
     return [' '.join(word_list[index : index + phrase_length])
             for index in range(end_index)]
+
+def remove_overlap(phrase, phrase_scores):
+    for key in phrase_scores:
+        for word in get_word_list(phrase):
+            if word in get_word_list(key):
+                phrase_scores.update({key: 0})
+    return phrase_scores
 
 def dict_get(d, k):
     if d.has_key(k):
