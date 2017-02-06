@@ -85,6 +85,18 @@ def multiple_consecutive_words_filter(search_arrays, data):
 		matchingLines+=consecutive_words_filter(search_array, data)
 	return list(set(matchingLines))
 
+def user_filter(search_users, data):
+	ret = []
+	for i in data:
+		try:
+			user in search_users
+			if i.split('\t')[1]==user:
+				ret.append(i)
+		except:
+			continue
+	return ret
+
+
 def isQuotn(elt):
 	return ((elt == "``") | (elt == "''") | (elt == "`") | (elt == "'") | (elt == "\""))
 
@@ -562,6 +574,7 @@ def extract_Info(event_name, inp_tweets):
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
 		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
 		awards_tweets = word_filter(congrats_words, GG_tweets)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Demo ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
