@@ -148,6 +148,42 @@ def printResults(inp_word_list, tweet, st, end):
 		result = tweet[tweet_start:tweet_end]
 	return result
 
+
+def get_nominee(tweet):
+	word_list = nltk.word_tokenize(tweet)
+	lower_word_list = map(str.lower, word_list)
+	nom_index, nom_word = None, None
+	n_st, n_end = 0,0
+
+	for i in range(0, len(nom_words)):
+		if nom_words[i] in lower_word_list:
+			nom_index = lower_word_list.index(nom_words[i])
+			nom_word = nom_words[i]
+
+	if(nom_index!=None):
+		if(nom_word == "nominee"):
+			increment = 1
+			if(lower_word_list[nom_index+increment] == "," | lower_word_list[nom_index+increment] == ":"):
+				increment += 1
+				n_st, n_end = handle_name(word_list[nom_index+increment:], nom_index+increment)
+				return printResults( map(correctParanthesis, word_list), tweet, n_st, n_end)
+			elif(lower_word_list[nom_index+increment] not in grammar):
+				n_st, n_end = handle_name(word_list[nom_index+increment:], nom_index+increment)
+				return printResults( map(correctParanthesis, word_list), tweet, n_st, n_end)
+
+	return None
+
+def match_nominee_award(nominees, tweet):
+	word_list = nltk.word_tokenize(tweet)
+	lower_word_list = map(str.lower, word_list)
+
+	for i in range(0, len(nominees)):
+		if(tweet.find(nominees[i])):
+			return nominees[i]
+
+	return None
+
+
 def get_winner(tweet):
 	word_list = nltk.word_tokenize(tweet)
 	lower_word_list = map(str.lower, word_list)
@@ -214,6 +250,7 @@ Oscars_Live_id = "1088416026" 				#@oscars_live
 
 congrats_words = ["congratulations", "congrats"]
 win_words = ["wins", "won", "winning", "winner"]
+nom_words = ["nominee", "nominate", "nomination", "nominated"]
 
 adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
 genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
@@ -542,6 +579,8 @@ def get_noms_and_awards():
     for key in nominees_to_awards:
         print key, nominees_to_awards[key]
 
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tweets = list(open("goldenglobes.tab","r"))
@@ -558,6 +597,36 @@ def extract_Info(event_name, inp_tweets):
 			print "award won is: ", award
 			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 			pairings.append( (winner, award) )
+		return pairings
+	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
+		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
+		awards_tweets = word_filter(congrats_words, GG_tweets)
+
+def extract_Info_With_Noms(event_name, inp_tweets):
+	lower_event_name = event_name.lower()
+	if("golden globe" in lower_event_name):
+		GG_tweets = number_filter([GG_tweet_id], inp_tweets)
+		awards_tweets = word_filter(congrats_words, GG_tweets)
+		nom_tweets = word_filter(nom_words, GG_tweets)
+		pairings = []
+		for i in awards_tweets:
+			winner, award = get_winner(i), get_award(i)
+			print "winner is: ", winner
+			print "award won is: ", award
+			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			pairings.append( (winner, award) )
+
+		nominees = []
+		for i in nom_tweets:
+			nominee, award = get_nominee(i), get_award(i)
+			if(nominee!=None):
+				nominees.append(str.lower(nominee))
+			elif((nominee==None) and (award!=None)):
+				nominee = match_nominee_award(tweet)
+			if((nominee!=None) and (award!=None)):
+				print nominee, " is nominated for ", award
+				pairings.append( (nominee, award) )
+
 		return pairings
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
 		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
