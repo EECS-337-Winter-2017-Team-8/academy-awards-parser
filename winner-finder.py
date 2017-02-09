@@ -85,6 +85,18 @@ def multiple_consecutive_words_filter(search_arrays, data):
 		matchingLines+=consecutive_words_filter(search_array, data)
 	return list(set(matchingLines))
 
+def user_filter(search_users, data):
+	ret = []
+	for i in data:
+		try:
+			user in search_users
+			if i.split('\t')[1]==user:
+				ret.append(i)
+		except:
+			continue
+	return ret
+
+
 def isQuotn(elt):
 	return ((elt == "``") | (elt == "''") | (elt == "`") | (elt == "'") | (elt == "\""))
 
