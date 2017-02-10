@@ -574,7 +574,13 @@ def extract_Info(event_name, inp_tweets):
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
 		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
 		awards_tweets = word_filter(congrats_words, GG_tweets)
-
+		pairings = []
+		for i in awards_tweets:
+			winner, award = get_winner(i), get_award(i)
+			print "winner is: ", winner
+			print "award won is: ", award
+			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			pairings.append( (winner, award) )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Demo ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
