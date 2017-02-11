@@ -8,6 +8,28 @@ import nltk, string, os
 def clear():
 	print "\n"*62
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Data ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
+
+GG_tweet_id = "18667907"  					#@goldenglobes
+TheAcademy_tweet_id = "200163448"			#@theacademy
+Oscars_Live_id = "1088416026" 				#@oscars_live
+
+congrats_words = ["congratulations", "congrats"]
+win_words = ["wins", "won", "winning", "winner"]
+nom_words = ["nominee", "nominate", "nomination", "nominated"]
+
+adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
+genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
+grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or", "with"] #added with
+media = ["play", "series", "show", "television", "tv"]
+subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "director", "documentary", "editing", "effects", "film",  "hair", 
+			"hairstyling", "hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", 
+			"score", "script", "series","song", "sound", "writing"]
+extra = ["language", "subject"]
+iswas = ["is", "was"]
+whowhich = ["who", "which"]
+pronouns = ["i", "he", "she", "it", "who", "whom", "they", "and"]
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Misc Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def number_filter(search_array, data, or_flag=True):
@@ -460,27 +482,6 @@ def printResults(inp_word_list, tweet, st, end):
 		result = tweet[tweet_start:tweet_end]
 	return result
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Data ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
-
-GG_tweet_id = "18667907"  					#@goldenglobes
-TheAcademy_tweet_id = "200163448"			#@theacademy
-Oscars_Live_id = "1088416026" 				#@oscars_live
-
-congrats_words = ["congratulations", "congrats"]
-win_words = ["wins", "won", "winning", "winner"]
-nom_words = ["nominee", "nominate", "nomination", "nominated"]
-
-adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
-genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
-grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or", "with"] #added with
-media = ["play", "series", "show", "television", "tv"]
-subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "director", "documentary", "editing", "effects", "film",  "hair", 
-			"hairstyling", "hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", 
-			"score", "script", "series","song", "sound", "writing"]
-extra = ["language", "subject"]
-iswas = ["is", "was"]
-whowhich = ["who", "which"]
-pronouns = ["i", "he", "she", "it", "who", "whom", "they", "and"]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
 
@@ -616,6 +617,9 @@ def get_nominee(tweet):
 								return None
 						elif((lower_word_list[nom_index-2] not in pronouns)&(lower_word_list[nom_index-2] != ",")): 		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-2] so it has everything until that index
 							n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2)
+							if(concise_word_list[n_st-1]=="from"):
+								n2_st, n2_end = handle_name_bwd(concise_word_list[:n_st-1], n_st-2)
+								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n2_st, n_end)	
 							return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
 						else:
 							return None
