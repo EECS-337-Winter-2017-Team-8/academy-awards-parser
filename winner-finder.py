@@ -8,15 +8,7 @@ import nltk, string, os
 def clear():
 	print "\n"*62
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~Functions Set up ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# def keywords(filepath):
-# 	# Function to load keywords in useful format
-# 	keywords = []
-# 	wordfile = open(filepath, "r")
-# 	for line in wordfile:
-# 		keywords.append(line)
-# 	return keywords
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Misc Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def number_filter(search_array, data, or_flag=True):
 	#takes strings
@@ -96,6 +88,10 @@ def user_filter(search_users, data):
 			continue
 	return ret
 
+def cutRT(tweet_word_list):
+	if (tweet_word_list[0:2]==["RT", "@"]):
+		return tweet_word_list[4:]
+	return tweet_word_list
 
 def isQuotn(elt):
 	return ((elt == "``") | (elt == "''") | (elt == "`") | (elt == "'") | (elt == "\""))
@@ -112,7 +108,19 @@ def correctParanthesis(token):
 	else:
 		return token
 
-def handle_name(tweet_segment, offset):
+def match_nominee_award(nominees, tweet):
+	word_list = nltk.word_tokenize(tweet)
+	lower_word_list = map(str.lower, word_list)
+
+	for i in range(0, len(nominees)):
+		if(tweet.find(nominees[i])!=-1):
+			return nominees[i]
+
+	return None
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Handle Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def handle_name_fwd(tweet_segment, offset):
 	#Call when you have found out where a name should begin:
 	#i.e. after "Congratulations to "
 	#Returns the name for formats: (1) Name; (2) Twitter Handle; (3) Name(@Twitter); (4) "Name": add'l info
@@ -142,174 +150,41 @@ def handle_name(tweet_segment, offset):
 	except:
 		return None, None
 
-def printResults(inp_word_list, tweet, st, end):
-	start_word = inp_word_list[st]
-	if(tweet.count(start_word)>1):
-		number_of_preceding_bests = inp_word_list[:st].count(start_word)
-		if(number_of_preceding_bests == 0):
-			new_tweet = tweet
-		else:	
-			for i in range(number_of_preceding_bests):
-				new_tweet = tweet[tweet.index(start_word) + len(start_word):]
-		tweet_start = new_tweet.index(inp_word_list[st])
-		tweet_end = tweet_start + 1+ new_tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
-		result = new_tweet[tweet_start:tweet_end]
-	else:
-		tweet_start = tweet.index(inp_word_list[st])
-		tweet_end = tweet_start + 1+ tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
-		result = tweet[tweet_start:tweet_end]
-	return result
+def handle_name_bwd(tweet_segment, offset):
+	#ex: ['Dev', 'Patel', 'and', 'Sunny', 'Pawar', 'introduce', '@', 'LionMovie']
+	#end must refer to the LAST INDEX that holds an important val, such that tweet_segment_rv[end] is the last part we need.
+	tweet_segment_rv = tweet_segment[::-1]
+	next_word = tweet_segment_rv[0]
+	bwd_start, bwd_end = None, None
 
-
-def get_nominee(tweet):
-	word_list = nltk.word_tokenize(tweet)
-	lower_word_list = map(str.lower, word_list)
-	nom_index, nom_word = None, None
-	n_st, n_end = 0,0
-
-	for i in range(0, len(nom_words)):
-		if nom_words[i] in lower_word_list:
-			nom_index = lower_word_list.index(nom_words[i])
-			nom_word = nom_words[i]
-
-	if(nom_index!=None):
-		if(nom_word == "nominee"):
-			increment = 1
-			if(lower_word_list[nom_index+increment] == "," | lower_word_list[nom_index+increment] == ":"):
-				increment += 1
-				n_st, n_end = handle_name(word_list[nom_index+increment:], nom_index+increment)
-				return printResults( map(correctParanthesis, word_list), tweet, n_st, n_end)
-			elif(lower_word_list[nom_index+increment] not in grammar):
-				n_st, n_end = handle_name(word_list[nom_index+increment:], nom_index+increment)
-				return printResults( map(correctParanthesis, word_list), tweet, n_st, n_end)
-
-	return None
-
-def match_nominee_award(nominees, tweet):
-	word_list = nltk.word_tokenize(tweet)
-	lower_word_list = map(str.lower, word_list)
-
-	for i in range(0, len(nominees)):
-		if(tweet.find(nominees[i])):
-			return nominees[i]
-
-	return None
-
-
-def get_winner(tweet):
-	word_list = nltk.word_tokenize(tweet)
-	lower_word_list = map(str.lower, word_list)
-	congrats_index, win_index, win_word = None, None, None
-	w_st, w_end = 0,0
-
-	for i in range(0, len(congrats_words)):
-		if congrats_words[i] in lower_word_list:
-			congrats_index = lower_word_list.index(congrats_words[i])
-
-	for i in range(0, len(win_words)):
-		if win_words[i] in lower_word_list:
-			win_index = lower_word_list.index(win_words[i])
-			win_word = win_words[i]
-
-	if((win_index!=None) and (congrats_index!=None)):
-		if(win_index < congrats_index):
-			if(win_word == "winner"):
-				increment = 1
-				while((lower_word_list[win_index+increment] == "is") | (lower_word_list[win_index+increment] == "...")):
-					increment+=1
-				w_st, w_end = handle_name(word_list[win_index+increment:], win_index+increment)
-				return printResults( map(correctParanthesis, word_list), tweet, w_st, w_end)
-
-		elif(congrats_index < win_index):
-			if(lower_word_list[congrats_index+1] == "to"):
-				# print "calling from to"
-				w_st, w_end = handle_name(word_list[congrats_index+2:], congrats_index+2)
-				# print "w_st: ", w_st, "; w_end: ", w_end
-				# print "word_list[w_st:w_end] = ", word_list[w_st:w_end]
-				return printResults( map(correctParanthesis, word_list), tweet, w_st, w_end)
-			elif(word_list[congrats_index+1] == ","):	
-				w_st, w_end = handle_name(word_list[congrats_index+2:], congrats_index+2)
-				return printResults( map(correctParanthesis, word_list), tweet, w_st, w_end)
-			else:
-				print "Neither to nor comma"
-
-	elif(congrats_index!=None):
-		if(lower_word_list[congrats_index+1] == "to"):
-			# print "calling from to"
-			w_st, w_end = handle_name(word_list[congrats_index+2:], congrats_index+2)
-			# print "w_st: ", w_st, "; w_end: ", w_end
-			# print "word_list[w_st:w_end] = ", word_list[w_st:w_end]
-			return printResults( map(correctParanthesis, word_list), tweet, w_st, w_end)
-		elif(word_list[congrats_index+1] == ","):	
-			w_st, w_end = handle_name(word_list[congrats_index+2:], congrats_index+2)
-			return printResults( map(correctParanthesis, word_list), tweet, w_st, w_end)
+	if (isQuotn (next_word)):
+		if(next_word == "'"):
+			for i in range(len(tweet_segment_rv[1:])):
+				if(isQuotn(tweet_segment_rv[i][0])):
+					bwd_end = i+1
+					bwd_start = 0
+					break
 		else:
-			print "Neither to nor comma"
-	
-	elif (win_index!=None):
-		if(win_word == "winner"):
-			increment = 1
-			while((lower_word_list[win_index+increment] == "is") | (lower_word_list[win_index+increment] == "...")):
-				increment+=1
-			w_st, w_end = handle_name(word_list[win_index+increment:], win_index+increment)
-			return printResults( map(correctParanthesis, word_list), tweet, w_st, w_end)
+			bwd_start, bwd_end = 0, [tweet_segment_rv.index(token) for token in tweet_segment_rv[1:] if isQuotn(token)][0]
+	elif (next_word == ")"):
+		bwd_start, bwd_end = 0, [tweet_segment_rv.index(token) for token in tweet_segment_rv[1:] if (token=="(")][0]
+		while( (len(tweet_segment_rv)>(bwd_end+2)) and (tweet_segment_rv[bwd_end+1][0].isupper())):
+			bwd_end+=1
+	elif ((len(tweet_segment_rv)>2) and (tweet_segment_rv[1] == "@")):
+		bwd_start, bwd_end = 0, 1
+	elif (next_word[0].isupper()):
+		bwd_start, bwd_end = 0,0
+		while( (len(tweet_segment_rv)>(bwd_end+1)) and(tweet_segment_rv[bwd_end+1][0].isupper())):
+			bwd_end+=1
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Data ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
-
-GG_tweet_id = "18667907"  					#@goldenglobes
-TheAcademy_tweet_id = "200163448"			#@theacademy
-Oscars_Live_id = "1088416026" 				#@oscars_live
-
-congrats_words = ["congratulations", "congrats"]
-win_words = ["wins", "won", "winning", "winner"]
-nom_words = ["nominee", "nominate", "nomination", "nominated"]
-
-adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
-genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
-grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or"]
-media = ["play", "series", "show", "television", "tv"]
-subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "director", "documentary", "editing", "effects", "film",  "hair", 
-			"hairstyling", "hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", 
-			"score", "script", "series","song", "sound", "writing"]
-extra = ["language", "subject"]
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
-# GG_tweets = number_filter([GG_tweet_id], tweets)
-# awards_tweets = word_filter(["congratulations"], GG_tweets)
-
-# host_GG_tweets = word_filter(["host"], GG_tweets)
-# presenter_GG_tweets = word_filter(["present"], GG_tweets)
-
-# nominee_tweets_v1 = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
-
-# indices = [i for i, x in enumerate(my_list) if x == "whatever"]
-#best_indices = [i for i, x in enumerate(lower_word_list) if x == "best"]
-def get_award(tweet):
-	word_list = nltk.word_tokenize(tweet)
-	lower_word_list = map(str.lower, word_list)
-	best_index = None
-	if("best" in lower_word_list):
-		best_indices = [i for i, x in enumerate(lower_word_list) if x == "best"]
-		for best_index in best_indices:
-		# best_index = lower_word_list.index("best")
-			next_word = lower_word_list[best_index+1]
-			if(next_word in subjects):
-				w_st, w_end = handle_subject(lower_word_list[best_index+1:],best_index+1) #Input is tweet cut AFTER best  
-				# print (word_list[best_index: w_end])
-			elif(next_word in adjectives):
-				w_st, w_end = handle_adjective(lower_word_list[best_index+1:],best_index+1)
-			elif(next_word in media):
-				w_st, w_end = handle_media(lower_word_list[best_index+1:],best_index+1)
-			elif(next_word in genres):
-				w_st, w_end = handle_genre(lower_word_list[best_index+1:],best_index+1)
-			else:
-				w_st, w_end = None, None
-
-			if(w_end):
-				return printResults(map(correctParanthesis, word_list), tweet, best_index, w_end-1)
-			else:
-				continue
-	return None
+	if((bwd_start==None) or (bwd_end==None)):
+		return None, None
+	else:
+		if(tweet_segment_rv[bwd_end+1]=="#"):
+			bwd_end+=1
+		start = offset-bwd_end
+		end = offset
+		return start, end
 
 def handle_subject(tweet_segment, offset):	
 	end, length = 0, len(tweet_segment)
@@ -330,7 +205,7 @@ def handle_subject(tweet_segment, offset):
 			#SUBJECT + AND + SUBJECT
 			w_st, w_end = handle_genre(tweet_segment[3:],offset+3)
 			return offset, w_end
-		elif ((next_word == "in") & (after_next_word == "a")&(length>=5)):
+		elif ((next_word == "in") and (after_next_word == "a") and (length>=5)):
 			next_word, after_next_word = tweet_segment[3], tweet_segment[4]
 			if((next_word in adjectives)&(after_next_word in subjects)):
 				#SUBJECT + IN + A + ADJECTIVE + SUBJECT
@@ -353,6 +228,8 @@ def handle_subject(tweet_segment, offset):
 					return offset, offset+5
 				else:
 					return offset, offset+4
+			else:
+				return offset, offset+5
 		elif ((next_word == "or") & (after_next_word in adjectives) & (length>=5)):
 			next_word, after_next_word = tweet_segment[3], tweet_segment[4]
 			if((next_word in subjects) & (after_next_word in adjectives) & (length>=7)):
@@ -560,42 +437,217 @@ def handle_media(tweet_segment, offset):
 						return 0, w_end
 	return 0,0
 
-def useWord_Award(index, tweet): #Returns a bool based on whether or not we should use
-	# the word as part of the Award Name.
-	token = tweet[index]
-	if ((token == "or") | (token == "in") | ((token == "a")&(tweet[index-1] == "in"))):
-		return True
-	elif (token in genres):
-		return True
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Print ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def get_noms_and_awards():
-    nominees_to_awards = {}
-    punctuation = """/.,;'":[]{}-_!$%^&*()+=\\|"""
-    for tweet in nominee_tweets_v1:
-        if "Best" not in tweet or "best" not in tweet:
-            continue
-        tokens = nltk.word_tokenize(tweet)
-        nom_index = tokens.index("nominated")
-        name_offset = nom_index - 2
-        award_offset = nom_index
-        name = ""
-        award = ""
-        for token in tokens[name_offset:nom_index]:
-            name += token + " "
+def printResults(inp_word_list, tweet, st, end):
+	if((st == None) or (end == None)):
+		return None
+	if(st==end):
+		return inp_word_list[st]
+	start_word = inp_word_list[st]
+	if(tweet.count(start_word)>1):
+		number_of_preceding_bests = inp_word_list[:st].count(start_word)
+		new_tweet = tweet
+		if(number_of_preceding_bests != 0):
+			for i in range(number_of_preceding_bests):
+				new_tweet = new_tweet[new_tweet.index(start_word) + len(start_word):]
+		tweet_start = new_tweet.index(inp_word_list[st])
+		tweet_end = tweet_start + 1+ new_tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
+		result = new_tweet[tweet_start:tweet_end]
+	else:
+		tweet_start = tweet.index(inp_word_list[st])
+		tweet_end = tweet_start + 1+ tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
+		result = tweet[tweet_start:tweet_end]
+	return result
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Data ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
+
+GG_tweet_id = "18667907"  					#@goldenglobes
+TheAcademy_tweet_id = "200163448"			#@theacademy
+Oscars_Live_id = "1088416026" 				#@oscars_live
+
+congrats_words = ["congratulations", "congrats"]
+win_words = ["wins", "won", "winning", "winner"]
+nom_words = ["nominee", "nominate", "nomination", "nominated"]
+
+adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
+genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
+grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or", "with"] #added with
+media = ["play", "series", "show", "television", "tv"]
+subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "director", "documentary", "editing", "effects", "film",  "hair", 
+			"hairstyling", "hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", 
+			"score", "script", "series","song", "sound", "writing"]
+extra = ["language", "subject"]
+iswas = ["is", "was"]
+whowhich = ["who", "which"]
+pronouns = ["i", "he", "she", "it", "who", "whom", "they", "and"]
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
+
+def get_award(tweet):
+	tweet_body = tweet.split("\t")[0]
+
+	word_list = nltk.word_tokenize(tweet_body)
+	concise_word_list = cutRT(word_list)
+	lower_word_list = map(str.lower, concise_word_list)
+
+	best_index = None
+	if("best" in lower_word_list):
+		best_indices = [i for i, x in enumerate(lower_word_list) if x == "best"]
+		for best_index in best_indices:
+		# best_index = lower_word_list.index("best")
+			next_word = lower_word_list[best_index+1]
+			if(next_word in subjects):
+				w_st, w_end = handle_subject(lower_word_list[best_index+1:],best_index+1) #Input is tweet cut AFTER best  
+				# print (word_list[best_index: w_end])
+			elif(next_word in adjectives):
+				w_st, w_end = handle_adjective(lower_word_list[best_index+1:],best_index+1)
+			elif(next_word in media):
+				w_st, w_end = handle_media(lower_word_list[best_index+1:],best_index+1)
+			elif(next_word in genres):
+				w_st, w_end = handle_genre(lower_word_list[best_index+1:],best_index+1)
+			else:
+				w_st, w_end = None, None
+
+			if(w_end):
+				return printResults(map(correctParanthesis, concise_word_list), tweet_body, best_index, w_end-1)
+			else:
+				continue
+	return None
+
+def get_winner(tweet):
+	tweet_body = tweet.split("\t")[0]
+	word_list = nltk.word_tokenize(tweet_body)
+	concise_word_list = cutRT(word_list)
+
+	lower_word_list = map(str.lower, concise_word_list)
+	congrats_index, win_index, win_word = None, None, None
+	w_st, w_end = 0,0
+
+	for i in range(0, len(congrats_words)):
+		if congrats_words[i] in lower_word_list:
+			congrats_index = lower_word_list.index(congrats_words[i])
+
+	for i in range(0, len(win_words)):
+		if win_words[i] in lower_word_list:
+			win_index = lower_word_list.index(win_words[i])
+			win_word = win_words[i]
+
+	if((win_index!=None) and (congrats_index!=None)):
+		if(win_index < congrats_index):
+			if(win_word == "winner"):
+				increment = 1
+				while((lower_word_list[win_index+increment] == "is") | (lower_word_list[win_index+increment] == "...")):
+					increment+=1
+				w_st, w_end = handle_name_fwd(concise_word_list[win_index+increment:], win_index+increment)
+				return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
+
+		elif(congrats_index < win_index):
+			if(lower_word_list[congrats_index+1] == "to"):
+				# print "calling from to"
+				w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+				# print "w_st: ", w_st, "; w_end: ", w_end
+				# print "word_list[w_st:w_end] = ", word_list[w_st:w_end]
+				return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
+			elif(concise_word_list[congrats_index+1] == ","):	
+				w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+				return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
+			else:
+				print "Neither to nor comma"
+
+	elif(congrats_index!=None):
+		if(lower_word_list[congrats_index+1] == "to"):
+			# print "calling from to"
+			w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+			# print "w_st: ", w_st, "; w_end: ", w_end
+			# print "word_list[w_st:w_end] = ", word_list[w_st:w_end]
+			return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
+		elif(concise_word_list[congrats_index+1] == ","):	
+			w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+			return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
+		else:
+			print "Neither to nor comma"
+	
+	elif (win_index!=None):
+		if(win_word == "winner"):
+			increment = 1
+			while((lower_word_list[win_index+increment] == "is") | (lower_word_list[win_index+increment] == "...")):
+				increment+=1
+			w_st, w_end = handle_name_fwd(concise_word_list[win_index+increment:], win_index+increment)
+			return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
+
+def get_nominee(tweet):
+	tweet_body = tweet.split("\t")[0]
+
+	word_list = nltk.word_tokenize(tweet_body)
+	concise_word_list = cutRT(word_list)
+	lower_word_list = map(str.lower, concise_word_list)
+	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
+
+	nom_index, nom_word = None, None
+	n_st, n_end = 0,0
+
+	for i in range(0, len(nom_words)):
+		if nom_words[i] in lower_word_list:
+			nom_index = lower_word_list.index(nom_words[i])
+			nom_word = nom_words[i]
+
+	if(nom_index!=None):
+		if(nom_word == "nominee"):
+			increment = 1
+			if(len(lower_word_list) > (nom_index+increment)):
+				if((lower_word_list[nom_index+increment] == ",") | (lower_word_list[nom_index+increment] == ":")):
+					increment += 1
+					n_st, n_end = handle_name_fwd(concise_word_list[nom_index+increment:], nom_index+increment)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
+				elif( (lower_word_list[nom_index+increment] not in grammar) & (lower_word_list[nom_index+increment]!="#") & (lower_word_list[nom_index+increment]!="is")) :
+					n_st, n_end = handle_name_fwd(concise_word_list[nom_index+increment:], nom_index+increment)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
+			return None
+		elif(nom_word == "nominated"):
+			if(nom_index >= 1):
+				if(lower_word_list[nom_index-1] in iswas):
+					if(nom_index>=2):
+						if(lower_word_list[nom_index-2] in whowhich):
+							if((nom_index>=3)&(lower_word_list[nom_index-3] == ",")):		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-3] so it has everything until that index
+								n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-3], nom_index-4)
+								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
+							else:
+								return None
+						elif((lower_word_list[nom_index-2] not in pronouns)&(lower_word_list[nom_index-2] != ",")): 		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-2] so it has everything until that index
+							n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2)
+							return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
+						else:
+							return None
+	return None
+
+# def get_noms_and_awards():
+#     nominees_to_awards = {}
+#     punctuation = """/.,;'":[]{}-_!$%^&*()+=\\|"""
+#     for tweet in nominee_tweets_v1:
+#         if "Best" not in tweet or "best" not in tweet:
+#             continue
+#         tokens = nltk.word_tokenize(tweet)
+#         nom_index = tokens.index("nominated")
+#         name_offset = nom_index - 2
+#         award_offset = nom_index
+#         name = ""
+#         award = ""
+#         for token in tokens[name_offset:nom_index]:
+#             name += token + " "
         
-        if nominees_to_awards.has_key(name) and award not in nominees_to_awards[name]:
-            nominees_to_awards[name].append(award)
-        else:
-            nominees_to_awards[name] = [award]
+#         if nominees_to_awards.has_key(name) and award not in nominees_to_awards[name]:
+#             nominees_to_awards[name].append(award)
+#         else:
+#             nominees_to_awards[name] = [award]
     
-    for key in nominees_to_awards:
-        print key, nominees_to_awards[key]
-
-
+#     for key in nominees_to_awards:
+#         print key, nominees_to_awards[key]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tweets = list(open("goldenglobes.tab","r"))
+n_tweets = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
 
 def extract_Info(event_name, inp_tweets):
 	lower_event_name = event_name.lower()
@@ -619,24 +671,29 @@ def extract_Info_With_Noms(event_name, inp_tweets):
 	if("golden globe" in lower_event_name):
 		GG_tweets = number_filter([GG_tweet_id], inp_tweets)
 		awards_tweets = word_filter(congrats_words, GG_tweets)
-		nom_tweets = word_filter(nom_words, GG_tweets)
+		# nom_tweets = word_filter(nom_words, inp_tweets)
+		nom_tweets = word_filter(["nominee"], inp_tweets)
 		pairings = []
-		for i in awards_tweets:
-			winner, award = get_winner(i), get_award(i)
-			print "winner is: ", winner
-			print "award won is: ", award
-			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-			pairings.append( (winner, award) )
+		# for i in awards_tweets:
+		# 	winner, award = get_winner(i), get_award(i)
+		# 	print "winner is: ", winner
+		# 	print "award won is: ", award
+		# 	print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+		# 	pairings.append((winner, award))
 		nominees = []
 		for i in nom_tweets:
+			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			print "i is : ", i
 			nominee, award = get_nominee(i), get_award(i)
 			if(nominee!=None):
 				nominees.append(str.lower(nominee))
+				print "nominee is: ", nominee
 			elif((nominee==None) and (award!=None)):
-				nominee = match_nominee_award(tweet)
+				nominee = match_nominee_award(nominees,i)
 			if((nominee!=None) and (award!=None)):
 				print nominee, " is nominated for ", award
 				pairings.append( (nominee, award) )
+		
 		return pairings
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
 		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
@@ -667,16 +724,13 @@ def run_Awards_Tests():
 def run_Nom_Tests():
 	for tweet in n_tweets:
 		try:
-			a = get_award(tweet)
-			# print tweet
-			# print a
-			# print "~~~~~~~~~~~~~~~~~~~~~~~~"
+			nominee = get_nominee(tweet)
+			print "tweet is: ", tweet
+			print "nominee is: ", nominee
 		except:
 			print "FAILED:", tweet
 			print "~~~~~~~~~~~~~~~~~~~~~~~~"
 			continue
-
-n_tweets = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
 
 extensive_awards_tweets = ["Congratulations to Moonlight (@moonlightmov) - Best Motion Picture - Drama - #GoldenGlobes https://t.co/NqBZd5uBso	Golden Globe Awards	18667907	818306803750420480	2017-01-09 04:02:00",
 "Congratulations to Isabelle Huppert - Best Actress in a Motion Picture - Drama - Elle - #GoldenGlobes https://t.co/wrkbydAtoL	Golden Globe Awards	18667907	818305939107434496	2017-01-09 03:58:33",
