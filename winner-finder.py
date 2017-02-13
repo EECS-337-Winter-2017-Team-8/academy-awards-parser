@@ -16,7 +16,8 @@ Oscars_Live_id = "1088416026" 				#@oscars_live
 
 congrats_words = ["congratulations", "congrats"]
 win_words = ["wins", "won", "winning", "winner"]
-nom_words = ["nominee", "nominate", "nomination", "nominated"]
+nom_words = ["nominee", "nominated"]
+pres_words = ["presenter", "presented", "presenting"]
 
 adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
 genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
@@ -27,7 +28,7 @@ subjects = ["actor", "achievement", "actress", "cinematography", "costume", "des
 			"score", "script", "series","song", "sound", "writing"]
 extra = ["language", "subject"]
 iswas = ["is", "was"]
-whowhich = ["who", "which"]
+whowhichthat = ["who", "which", "that"]
 pronouns = ["i", "he", "she", "it", "who", "whom", "they", "and"]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Misc Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,6 +141,28 @@ def match_nominee_award(nominees, tweet):
 
 	return None
 
+def notEveryWordIsCaps(inp_word_list):
+	for word in inp_word_list:
+		if(word[0].isalpha() and not(word[0].isupper())):
+			return True
+	return False
+
+#Delete once done
+def createTextFiles():
+	f1 = open("p_1.txt", "w")
+	f2 = open("p_2.txt", "w")
+	f3 = open("p_3.txt", "w")
+	for i in p_tweets_1:
+		f1.write(i)
+	for j in p_tweets_2:
+		f2.write(j)
+	for k in p_tweets_3:
+		f3.write(j)
+	f1.close()
+	f2.close()
+	f3.close()
+	return
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Handle Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def handle_name_fwd(tweet_segment, offset):
@@ -157,15 +180,22 @@ def handle_name_fwd(tweet_segment, offset):
 	elif (next_word == "@"):
 		start, end = 0,1
 
-	elif (next_word[0].isupper()):
+	elif (next_word[0].isupper() and notEveryWordIsCaps(tweet_segment)):
 		start, end = 0,0
-		while(tweet_segment[end+1][0].isupper() & (tweet_segment[end+1].lower()!="for")):
+		while( ( len(tweet_segment) > (end+1)) and (tweet_segment[end+1][0].isupper()) and(tweet_segment[end+1].lower()!="for")):
+			# print "this is:", tweet_segment[end+1]
 			end+=1
-	if(end!=None):
-		if tweet_segment[end+1]=="(":
-			end = end+1+tweet_segment[end+1:].index(")")
-		elif tweet_segment[end+1]==":":
-			end = end+1+tweet_segment[end+2:].index("-") #Hard-coded.......
+	if((end!=None) and (end!=(len(tweet_segment)-1))):
+		if (tweet_segment[end+1]=="("):
+			try:
+				end = end+1+tweet_segment[end+1:].index(")")
+			except:
+				pass
+		elif (tweet_segment[end+1]==":"):
+			try:
+				end = end+1+tweet_segment[end+2:].index("-")
+			except:
+				pass
 	# print "internal answer is", tweet_segment[start:end+1] 
 	try:
 		return start+offset, end+offset
@@ -190,11 +220,12 @@ def handle_name_bwd(tweet_segment, offset):
 			bwd_start, bwd_end = 0, [tweet_segment_rv.index(token) for token in tweet_segment_rv[1:] if isQuotn(token)][0]
 	elif (next_word == ")"):
 		bwd_start, bwd_end = 0, [tweet_segment_rv.index(token) for token in tweet_segment_rv[1:] if (token=="(")][0]
-		while( (len(tweet_segment_rv)>(bwd_end+2)) and (tweet_segment_rv[bwd_end+1][0].isupper())):
-			bwd_end+=1
+		if(notEveryWordIsCaps(tweet_segment_rv)):
+			while( (len(tweet_segment_rv)>(bwd_end+2)) and (tweet_segment_rv[bwd_end+1][0].isupper())):
+				bwd_end+=1
 	elif ((len(tweet_segment_rv)>2) and (tweet_segment_rv[1] == "@")):
 		bwd_start, bwd_end = 0, 1
-	elif (next_word[0].isupper()):
+	elif (next_word[0].isupper()): #and notEveryWordIsCaps(tweet_segment)):
 		bwd_start, bwd_end = 0,0
 		while( (len(tweet_segment_rv)>(bwd_end+1)) and(tweet_segment_rv[bwd_end+1][0].isupper())):
 			bwd_end+=1
@@ -202,11 +233,12 @@ def handle_name_bwd(tweet_segment, offset):
 	if((bwd_start==None) or (bwd_end==None)):
 		return None, None
 	else:
-		if(tweet_segment_rv[bwd_end+1]=="#"):
+		if( (bwd_end<(len(tweet_segment_rv)-1) ) and (tweet_segment_rv[bwd_end+1]=="#")):
 			bwd_end+=1
 		start = offset-bwd_end
 		end = offset
 		return start, end
+	return None, None
 
 def handle_subject(tweet_segment, offset):	
 	end, length = 0, len(tweet_segment)
@@ -468,10 +500,10 @@ def printResults(inp_word_list, tweet, st, end):
 		return inp_word_list[st]
 	start_word = inp_word_list[st]
 	if(tweet.count(start_word)>1):
-		number_of_preceding_bests = inp_word_list[:st].count(start_word)
+		number_of_preceding_copies = inp_word_list[:st].count(start_word)
 		new_tweet = tweet
-		if(number_of_preceding_bests != 0):
-			for i in range(number_of_preceding_bests):
+		if(number_of_preceding_copies != 0):
+			for i in range(number_of_preceding_copies):
 				new_tweet = new_tweet[new_tweet.index(start_word) + len(start_word):]
 		tweet_start = new_tweet.index(inp_word_list[st])
 		tweet_end = tweet_start + 1+ new_tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
@@ -481,7 +513,6 @@ def printResults(inp_word_list, tweet, st, end):
 		tweet_end = tweet_start + 1+ tweet[tweet_start+1:].index(inp_word_list[end]) +len(inp_word_list[end])
 		result = tweet[tweet_start:tweet_end]
 	return result
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
 
@@ -609,7 +640,7 @@ def get_nominee(tweet):
 			if(nom_index >= 1):
 				if(lower_word_list[nom_index-1] in iswas):
 					if(nom_index>=2):
-						if(lower_word_list[nom_index-2] in whowhich):
+						if(lower_word_list[nom_index-2] in whowhichthat):
 							if((nom_index>=3)&(lower_word_list[nom_index-3] == ",")):		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-3] so it has everything until that index
 								n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-3], nom_index-4)
 								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
@@ -617,41 +648,78 @@ def get_nominee(tweet):
 								return None
 						elif((lower_word_list[nom_index-2] not in pronouns)&(lower_word_list[nom_index-2] != ",")): 		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-2] so it has everything until that index
 							n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2)
-							if(concise_word_list[n_st-1]=="from"):
-								n2_st, n2_end = handle_name_bwd(concise_word_list[:n_st-1], n_st-2)
-								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n2_st, n_end)	
-							return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
+							if(n_st!=None and n_end!=None):
+								if(concise_word_list[n_st-1]=="from"):
+									n2_st, n2_end = handle_name_bwd(concise_word_list[:n_st-1], n_st-2)
+									return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n2_st, n_end)	
+								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
+							else: return None
 						else:
 							return None
+				elif(lower_word_list[nom_index-1]== ","):
+					n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2)
+					return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)	
 	return None
 
-# def get_noms_and_awards():
-#     nominees_to_awards = {}
-#     punctuation = """/.,;'":[]{}-_!$%^&*()+=\\|"""
-#     for tweet in nominee_tweets_v1:
-#         if "Best" not in tweet or "best" not in tweet:
-#             continue
-#         tokens = nltk.word_tokenize(tweet)
-#         nom_index = tokens.index("nominated")
-#         name_offset = nom_index - 2
-#         award_offset = nom_index
-#         name = ""
-#         award = ""
-#         for token in tokens[name_offset:nom_index]:
-#             name += token + " "
-        
-#         if nominees_to_awards.has_key(name) and award not in nominees_to_awards[name]:
-#             nominees_to_awards[name].append(award)
-#         else:
-#             nominees_to_awards[name] = [award]
-    
-#     for key in nominees_to_awards:
-#         print key, nominees_to_awards[key]
+def get_presenter(tweet):
+	tweet_body = tweet.split("\t")[0]
+
+	word_list = nltk.word_tokenize(tweet_body)
+	concise_word_list = cutRT(word_list)
+	lower_word_list = map(str.lower, concise_word_list)
+	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
+
+	pres_index, pres_word = None, None
+	p_st, p_end = 0,0
+
+	for i in range(0, len(pres_words)):
+		if pres_words[i] in lower_word_list:
+			pres_index = lower_word_list.index(pres_words[i])
+			pres_word = pres_words[i]
+
+	if(pres_index!=None):
+		if(pres_word == "presenter"):
+			if(pres_index!=0):
+				if((lower_word_list[pres_index-1] == "best") and ( len(lower_word_list)>(pres_index+2) )):
+					if( (lower_word_list[pres_index+1] in iswas) or (lower_word_list[pres_index+1] == "for") or (lower_word_list[pres_index+1] == "=")):
+						p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2)
+						if((p_st!=None) and (p_end != None)):
+							return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+					elif( len(lower_word_list)>(pres_index+3) and (lower_word_list[pres_index+1] == "goes") and (lower_word_list[pres_index+1] == "to")):
+						p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2)
+						if((p_st!=None) and (p_end != None)):
+							return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+						else:
+							return None
+					elif( len(lower_word_list)):
+						return None
+					else:
+						return None
+				elif( (not (concise_word_list[pres_index+1] in grammar)) and ( concise_word_list[pres_index+1][0].isupper() or (concise_word_list[pres_index+1][0]=="@") )):
+					p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2)
+					if((p_st!=None) and (p_end != None)):
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+					else:
+						return None
+
+
+			return None
+		elif(pres_word == "presented"):
+			return None
+		elif(pres_word == "presenting"):
+			return None
+
+	return None
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tweets = list(open("goldenglobes.tab","r"))
 n_tweets = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
+n_tweets_2 = word_filter(nom_words, tweets)
+p_tweets_1 = word_filter([pres_words[0]], tweets)
+p_tweets_2 = word_filter([pres_words[1]], tweets)
+p_tweets_3 = word_filter([pres_words[2]], tweets)
 
 def extract_Info(event_name, inp_tweets):
 	lower_event_name = event_name.lower()
@@ -726,7 +794,7 @@ def run_Awards_Tests():
 			continue
 
 def run_Nom_Tests():
-	for tweet in n_tweets:
+	for tweet in n_tweets_2[:50]:
 		try:
 			nominee = get_nominee(tweet)
 			print "tweet is: ", tweet
