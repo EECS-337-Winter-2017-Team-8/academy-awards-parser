@@ -519,11 +519,9 @@ def get_award(tweet):
 	if("best" in lower_word_list):
 		best_indices = [i for i, x in enumerate(lower_word_list) if x == "best"]
 		for best_index in best_indices:
-		# best_index = lower_word_list.index("best")
 			next_word = lower_word_list[best_index+1]
 			if(next_word in subjects):
 				w_st, w_end = handle_subject(lower_word_list[best_index+1:],best_index+1) #Input is tweet cut AFTER best  
-				# print (word_list[best_index: w_end])
 			elif(next_word in adjectives):
 				w_st, w_end = handle_adjective(lower_word_list[best_index+1:],best_index+1)
 			elif(next_word in media):
@@ -673,11 +671,7 @@ def get_presenter(tweet):
 		concise_tweet_body = tweet_body.replace("&amp;","&")[tweet.index(":")+1:]
 	else:
 		concise_tweet_body = tweet_body.replace("&amp;","&")
-	# if ((concise_word_list[0]=="@") and (tweet[0:4]=="RT @")):
-	# 	concise_tweet_body = tweet_body[tweet_body[4:].index(correctParanthesis(concise_word_list[0]))+4:]
-	# else:
-	# 	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
-
+		
 	isNotAllCaps = notEveryWordIsCaps(concise_word_list)
 
 	pres_index, pres_word = None, None
