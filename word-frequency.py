@@ -1,5 +1,7 @@
 import operator
 import random
+import sentiment_analysis
+
 
 def get_tweets(filename):
     tweets = []
@@ -13,6 +15,31 @@ def get_texts(tweets):
 def remove_retweets(texts):
     return [text for text in texts if "RT" not in text]
 
+def evaluate(texts, phrase, classifier, threshold = 0.20, number = 3):
+    containing = get_containing(texts, phrase)
+    count = classifier.count(containing)
+    positive_count = count[0]
+    neutral_count = count[1]
+    negative_count = count[2]
+    total_count = positive_count + negative_count
+    positive_ratio = (float(positive_count) / total_count) * 100
+    built_phrases = yank_phrases(number, texts, phrase, threshold)
+    print("\nDuring the golden globes, people tweeted " + str(positive_count) + " positive things about " +
+          "\"" + phrase + "\"" +
+          " and " + str(negative_count) + " negative things, a ratio of " + str(positive_ratio) +
+          " percent positive. People said a variety of things, but a lot of people made thematically" +
+          " related comments like these (with a confidence threshold of " +
+          str(threshold * 100) + " percent): " + "\n\n" + pretty_print(built_phrases))
+
+def pretty_print(phrases):
+    pretty = ""
+    for phrase in phrases:
+        pretty += (phrase + "\n\n")
+    return pretty
+
+def get_containing(texts, phrase):
+    return [text for text in texts if phrase in text]
+
 def yank_phrases(number, texts, phrase, threshold = 0.15):
     phrase_builder = get_unique_phrase_builder(texts, phrase, threshold)
     return [next(phrase_builder) for index in range(number)]
@@ -22,11 +49,14 @@ def get_unique_phrase_builder(texts, seed_phrase, threshold = 0.15):
     while True:
         phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
         built_phrase = strip_retweet_header(next(phrase_builder))
-        while built_phrase in used_phrases:
-            phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
-            built_phrase = strip_retweet_header(next(phrase_builder))
-        used_phrases.append(built_phrase)
-        yield built_phrase
+        if built_phrase == seed_phrase:
+            yield seed_phrase
+        else:
+            while built_phrase in used_phrases:
+                phrase_builder = get_phrase_builder(texts, seed_phrase, threshold)
+                built_phrase = strip_retweet_header(next(phrase_builder))
+            used_phrases.append(built_phrase)
+            yield built_phrase
 
 def strip_retweet_header(phrase):
     words = get_word_list(phrase)
@@ -40,19 +70,18 @@ def strip_retweet_header(phrase):
     clean_word_list = words[clean_start_index:]
     return " ".join(clean_word_list)
 
-
-
-def get_phrase_builder(texts, phrase, threshold = 0.15):
-    global used_phrases
+def get_phrase_builder(texts, phrase, threshold = 0.15, used_phrases = []):
     candidates = get_probability_given(texts, phrase,
                                        [len(get_word_list(phrase)) + 1])
     candidates = {candidate: candidates[candidate]
                   for candidate in candidates
-                  if candidates[candidate] > threshold}
+                  if (candidates[candidate] > threshold and
+                      strip_retweet_header(candidate) not in used_phrases and
+                      strip_retweet_header(candidate) != phrase)}
     if candidates:
         yield next(get_phrase_builder(texts,
                                       choose_event(candidates),
-                                      threshold))
+                                      threshold, used_phrases))
     else:
         yield phrase
 
@@ -135,5 +164,9 @@ def sort_dict(freq_dict):
     sorted_freqs = sorted(freq_dict.items(), key=operator.itemgetter(1))
     return sorted_freqs
 
-
 ggtexts = get_texts(get_tweets("goldenglobes.tab"))
+classifier = sentiment_analysis.Bayes_Classifier()
+#classifier.train()
+
+def tell_me_about(phrase, threshold = 0.20, number = 3):
+    evaluate(ggtexts, phrase, classifier, threshold, number)
