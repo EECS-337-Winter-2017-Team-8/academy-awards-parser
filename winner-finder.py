@@ -857,6 +857,39 @@ def get_presenter(tweet):
 			return None
 	return None
 
+def get_host():
+	word_file = open("wordsEn.txt", "r")
+	en_words = set([word.strip().lower() for word in word_file])
+	host = []
+	host_tweets = word_filter(["host", "hosts", "hosting", "hosted"], tweets)
+	host_tweets = " ".join(host_tweets)
+	host_tweets_words = [word.lower() for word in nltk.regexp_tokenize(host_tweets, pattern="\w[a-z]+")]
+
+	word_list = []
+	stop_words = nltk.corpus.stopwords.words("english")
+	stop_words.extend(["globe", "golden", "goldenglobe", "goldenglobes", "oscar", "oscars", "http", "https", "rt"])
+
+	for word in host_tweets_words:
+		if word not in stop_words and word not in en_words:
+			word_list.append(word)
+
+	fdist = nltk.FreqDist(word_list)
+	# for word in fdist.most_common(50):
+	# 	print word
+
+	for word in fdist.most_common(2):
+		host.append(word[0])
+
+	if host[0] in host[1]:
+		host = [host[1]]
+	elif host[1] in host[0]:
+		host = [host[0]]
+
+	word_file.close()
+
+	return host
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tweets = list(open("goldenglobes.tab","r"))
@@ -961,6 +994,13 @@ def run_Pres_Tests():
 			print "FAILED:", tweet
 			print "~~~~~~~~~~~~~~~~~~~~~~~~"
 			continue
+
+def run_Host_Tests():
+	hosts = get_host()
+	if len(hosts) == 1:
+		print "Host is " + hosts[0] + "."
+	else:
+		print "Hosts are " + hosts[0] + " and " + hosts[1] + "."
 
 extensive_awards_tweets = ["Congratulations to Moonlight (@moonlightmov) - Best Motion Picture - Drama - #GoldenGlobes https://t.co/NqBZd5uBso	Golden Globe Awards	18667907	818306803750420480	2017-01-09 04:02:00",
 "Congratulations to Isabelle Huppert - Best Actress in a Motion Picture - Drama - Elle - #GoldenGlobes https://t.co/wrkbydAtoL	Golden Globe Awards	18667907	818305939107434496	2017-01-09 03:58:33",
