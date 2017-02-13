@@ -21,15 +21,15 @@ pres_words = ["presenter", "presented", "presenting"]
 
 adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
 genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
-grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or", "with"] #added with
+grammar = [",", "(", ")", "a", "and", "by", "for", "in", "or", "&", "with", ":"] #added with
 media = ["play", "series", "show", "television", "tv"]
 subjects = ["actor", "achievement", "actress", "cinematography", "costume", "design", "directing", "director", "documentary", "editing", "effects", "film",  "hair", 
 			"hairstyling", "hair-styling", "makeup", "miniseries", "mini", "mixing", "movie", "music", "performance", "picture", "production", "role","screenplay", 
 			"score", "script", "series","song", "sound", "writing"]
 extra = ["language", "subject"]
-iswas = ["is", "was"]
+iswasare = ["is", "was", "are"]
 whowhichthat = ["who", "which", "that"]
-pronouns = ["i", "he", "she", "it", "who", "whom", "they", "and"]
+pronouns = ["i", "he", "she", "me", "them", "it", "who", "whom", "they", "and"]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Misc Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -131,6 +131,11 @@ def correctParanthesis(token):
 	else:
 		return token
 
+def correctAmpersands(tweet):
+	if "&amp;" in tweet:
+		return tweet.replace("&amp;","&")
+	return tweet
+
 def match_nominee_award(nominees, tweet):
 	word_list = nltk.word_tokenize(tweet)
 	lower_word_list = map(str.lower, word_list)
@@ -147,25 +152,12 @@ def notEveryWordIsCaps(inp_word_list):
 			return True
 	return False
 
-#Delete once done
-def createTextFiles():
-	f1 = open("p_1.txt", "w")
-	f2 = open("p_2.txt", "w")
-	f3 = open("p_3.txt", "w")
-	for i in p_tweets_1:
-		f1.write(i)
-	for j in p_tweets_2:
-		f2.write(j)
-	for k in p_tweets_3:
-		f3.write(j)
-	f1.close()
-	f2.close()
-	f3.close()
-	return
+def isLowerAnd(word):
+	return word == "and" or word == "&"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Handle Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def handle_name_fwd(tweet_segment, offset):
+def handle_name_fwd(tweet_segment, offset, tweetIsNotAllCaps=False):
 	#Call when you have found out where a name should begin:
 	#i.e. after "Congratulations to "
 	#Returns the name for formats: (1) Name; (2) Twitter Handle; (3) Name(@Twitter); (4) "Name": add'l info
@@ -180,7 +172,7 @@ def handle_name_fwd(tweet_segment, offset):
 	elif (next_word == "@"):
 		start, end = 0,1
 
-	elif (next_word[0].isupper() and notEveryWordIsCaps(tweet_segment)):
+	elif (next_word[0].isupper() and tweetIsNotAllCaps):
 		start, end = 0,0
 		while( ( len(tweet_segment) > (end+1)) and (tweet_segment[end+1][0].isupper()) and(tweet_segment[end+1].lower()!="for")):
 			# print "this is:", tweet_segment[end+1]
@@ -202,7 +194,7 @@ def handle_name_fwd(tweet_segment, offset):
 	except:
 		return None, None
 
-def handle_name_bwd(tweet_segment, offset):
+def handle_name_bwd(tweet_segment, offset, tweetIsNotAllCaps=False):
 	#ex: ['Dev', 'Patel', 'and', 'Sunny', 'Pawar', 'introduce', '@', 'LionMovie']
 	#end must refer to the LAST INDEX that holds an important val, such that tweet_segment_rv[end] is the last part we need.
 	tweet_segment_rv = tweet_segment[::-1]
@@ -220,12 +212,12 @@ def handle_name_bwd(tweet_segment, offset):
 			bwd_start, bwd_end = 0, [tweet_segment_rv.index(token) for token in tweet_segment_rv[1:] if isQuotn(token)][0]
 	elif (next_word == ")"):
 		bwd_start, bwd_end = 0, [tweet_segment_rv.index(token) for token in tweet_segment_rv[1:] if (token=="(")][0]
-		if(notEveryWordIsCaps(tweet_segment_rv)):
+		if(tweetIsNotAllCaps):
 			while( (len(tweet_segment_rv)>(bwd_end+2)) and (tweet_segment_rv[bwd_end+1][0].isupper())):
 				bwd_end+=1
-	elif ((len(tweet_segment_rv)>2) and (tweet_segment_rv[1] == "@")):
+	elif ((len(tweet_segment_rv)>=2) and (tweet_segment_rv[1] == "@")):
 		bwd_start, bwd_end = 0, 1
-	elif (next_word[0].isupper()): #and notEveryWordIsCaps(tweet_segment)):
+	elif (next_word[0].isupper() and tweetIsNotAllCaps): #and notEveryWordIsCaps(tweet_segment)):
 		bwd_start, bwd_end = 0,0
 		while( (len(tweet_segment_rv)>(bwd_end+1)) and(tweet_segment_rv[bwd_end+1][0].isupper())):
 			bwd_end+=1
@@ -255,7 +247,7 @@ def handle_subject(tweet_segment, offset):
 		return offset, w_end
 
 	elif(next_word in grammar):
-		if ((next_word == "and") & (after_next_word in subjects)):
+		if ((isLowerAnd(next_word)) & (after_next_word in subjects)):
 			#SUBJECT + AND + SUBJECT
 			w_st, w_end = handle_genre(tweet_segment[3:],offset+3)
 			return offset, w_end
@@ -517,7 +509,7 @@ def printResults(inp_word_list, tweet, st, end):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~~		
 
 def get_award(tweet):
-	tweet_body = tweet.split("\t")[0]
+	tweet_body = correctAmpersands(tweet).split("\t")[0]
 
 	word_list = nltk.word_tokenize(tweet_body)
 	concise_word_list = cutRT(word_list)
@@ -548,9 +540,10 @@ def get_award(tweet):
 	return None
 
 def get_winner(tweet):
-	tweet_body = tweet.split("\t")[0]
+	tweet_body = correctAmpersands(tweet).split("\t")[0]
 	word_list = nltk.word_tokenize(tweet_body)
 	concise_word_list = cutRT(word_list)
+	isNotAllCaps = notEveryWordIsCaps(concise_word_list)
 
 	lower_word_list = map(str.lower, concise_word_list)
 	congrats_index, win_index, win_word = None, None, None
@@ -571,18 +564,18 @@ def get_winner(tweet):
 				increment = 1
 				while((lower_word_list[win_index+increment] == "is") | (lower_word_list[win_index+increment] == "...")):
 					increment+=1
-				w_st, w_end = handle_name_fwd(concise_word_list[win_index+increment:], win_index+increment)
+				w_st, w_end = handle_name_fwd(concise_word_list[win_index+increment:], win_index+increment, isNotAllCaps)
 				return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
 
 		elif(congrats_index < win_index):
 			if(lower_word_list[congrats_index+1] == "to"):
 				# print "calling from to"
-				w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+				w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2, isNotAllCaps)
 				# print "w_st: ", w_st, "; w_end: ", w_end
 				# print "word_list[w_st:w_end] = ", word_list[w_st:w_end]
 				return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
 			elif(concise_word_list[congrats_index+1] == ","):	
-				w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+				w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2, isNotAllCaps)
 				return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
 			else:
 				print "Neither to nor comma"
@@ -590,12 +583,12 @@ def get_winner(tweet):
 	elif(congrats_index!=None):
 		if(lower_word_list[congrats_index+1] == "to"):
 			# print "calling from to"
-			w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+			w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2, isNotAllCaps)
 			# print "w_st: ", w_st, "; w_end: ", w_end
 			# print "word_list[w_st:w_end] = ", word_list[w_st:w_end]
 			return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
 		elif(concise_word_list[congrats_index+1] == ","):	
-			w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2)
+			w_st, w_end = handle_name_fwd(concise_word_list[congrats_index+2:], congrats_index+2, isNotAllCaps)
 			return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
 		else:
 			print "Neither to nor comma"
@@ -605,16 +598,25 @@ def get_winner(tweet):
 			increment = 1
 			while((lower_word_list[win_index+increment] == "is") | (lower_word_list[win_index+increment] == "...")):
 				increment+=1
-			w_st, w_end = handle_name_fwd(concise_word_list[win_index+increment:], win_index+increment)
+			w_st, w_end = handle_name_fwd(concise_word_list[win_index+increment:], win_index+increment, isNotAllCaps)
 			return printResults( map(correctParanthesis, concise_word_list), tweet_body, w_st, w_end)
 
 def get_nominee(tweet):
-	tweet_body = tweet.split("\t")[0]
+	tweet_body = correctAmpersands(tweet).split("\t")[0]
 
 	word_list = nltk.word_tokenize(tweet_body)
 	concise_word_list = cutRT(word_list)
 	lower_word_list = map(str.lower, concise_word_list)
-	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
+
+	if(tweet[0:4]=="RT @"):
+		concise_tweet_body = tweet[tweet.index(":")+1:]
+
+	# if(concise_word_list[0]=="@" and tweet[0:4]=="RT @"):
+	# 	concise_tweet_body = tweet_body[tweet_body[4:].index(correctParanthesis(concise_word_list[0]))+4:]
+	# else:
+	# 	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
+
+	isNotAllCaps = notEveryWordIsCaps(concise_word_list)
 
 	nom_index, nom_word = None, None
 	n_st, n_end = 0,0
@@ -630,44 +632,53 @@ def get_nominee(tweet):
 			if(len(lower_word_list) > (nom_index+increment)):
 				if((lower_word_list[nom_index+increment] == ",") | (lower_word_list[nom_index+increment] == ":")):
 					increment += 1
-					n_st, n_end = handle_name_fwd(concise_word_list[nom_index+increment:], nom_index+increment)
+					n_st, n_end = handle_name_fwd(concise_word_list[nom_index+increment:], nom_index+increment, isNotAllCaps)
 					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
 				elif( (lower_word_list[nom_index+increment] not in grammar) & (lower_word_list[nom_index+increment]!="#") & (lower_word_list[nom_index+increment]!="is")) :
-					n_st, n_end = handle_name_fwd(concise_word_list[nom_index+increment:], nom_index+increment)
+					n_st, n_end = handle_name_fwd(concise_word_list[nom_index+increment:], nom_index+increment, isNotAllCaps)
 					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
 			return None
 		elif(nom_word == "nominated"):
 			if(nom_index >= 1):
-				if(lower_word_list[nom_index-1] in iswas):
+				if(lower_word_list[nom_index-1] in iswasare):
 					if(nom_index>=2):
 						if(lower_word_list[nom_index-2] in whowhichthat):
 							if((nom_index>=3)&(lower_word_list[nom_index-3] == ",")):		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-3] so it has everything until that index
-								n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-3], nom_index-4)
+								n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-3], nom_index-4, isNotAllCaps)
 								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
 							else:
 								return None
 						elif((lower_word_list[nom_index-2] not in pronouns)&(lower_word_list[nom_index-2] != ",")): 		#Name begins.. call handle_name_bwd with lower_word_list[:nom_index-2] so it has everything until that index
-							n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2)
+							n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2, isNotAllCaps)
 							if(n_st!=None and n_end!=None):
-								if(concise_word_list[n_st-1]=="from"):
-									n2_st, n2_end = handle_name_bwd(concise_word_list[:n_st-1], n_st-2)
+								if(lower_word_list[n_st-1]=="from"):
+									n2_st, n2_end = handle_name_bwd(concise_word_list[:n_st-1], n_st-2, isNotAllCaps)
 									return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n2_st, n_end)	
 								return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)
 							else: return None
 						else:
 							return None
 				elif(lower_word_list[nom_index-1]== ","):
-					n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2)
+					n_st, n_end = handle_name_bwd(concise_word_list[:nom_index-1], nom_index-2, isNotAllCaps)
 					return printResults(map(correctParanthesis, concise_word_list), concise_tweet_body, n_st, n_end)	
 	return None
 
 def get_presenter(tweet):
-	tweet_body = tweet.split("\t")[0]
-
+	tweet_body = correctAmpersands(tweet).split("\t")[0]
 	word_list = nltk.word_tokenize(tweet_body)
 	concise_word_list = cutRT(word_list)
 	lower_word_list = map(str.lower, concise_word_list)
-	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
+	
+	if(tweet[0:4]=="RT @"):
+		concise_tweet_body = tweet_body.replace("&amp;","&")[tweet.index(":")+1:]
+	else:
+		concise_tweet_body = tweet_body.replace("&amp;","&")
+	# if ((concise_word_list[0]=="@") and (tweet[0:4]=="RT @")):
+	# 	concise_tweet_body = tweet_body[tweet_body[4:].index(correctParanthesis(concise_word_list[0]))+4:]
+	# else:
+	# 	concise_tweet_body = tweet_body[tweet_body.index(correctParanthesis(concise_word_list[0])):]
+
+	isNotAllCaps = notEveryWordIsCaps(concise_word_list)
 
 	pres_index, pres_word = None, None
 	p_st, p_end = 0,0
@@ -679,47 +690,189 @@ def get_presenter(tweet):
 
 	if(pres_index!=None):
 		if(pres_word == "presenter"):
-			if(pres_index!=0):
-				if((lower_word_list[pres_index-1] == "best") and ( len(lower_word_list)>(pres_index+2) )):
-					if( (lower_word_list[pres_index+1] in iswas) or (lower_word_list[pres_index+1] == "for") or (lower_word_list[pres_index+1] == "=")):
-						p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2)
+			if(pres_index!=0 and (lower_word_list[pres_index-1] == "best") and ( len(lower_word_list)>(pres_index+2) )):
+					if( (lower_word_list[pres_index+1] in iswasare) or (lower_word_list[pres_index+1] == "for") or (lower_word_list[pres_index+1] == "=")):
+						p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2, isNotAllCaps)
 						if((p_st!=None) and (p_end != None)):
+							if(len(concise_word_list)>p_end+1):
+								if (isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+									p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+									if(p_st_2!=None and p_end_2!=None):
+										return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
 							return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
-					elif( len(lower_word_list)>(pres_index+3) and (lower_word_list[pres_index+1] == "goes") and (lower_word_list[pres_index+1] == "to")):
-						p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2)
+					elif( len(lower_word_list)>(pres_index+3) and (lower_word_list[pres_index+1] == "goes") and (lower_word_list[pres_index+2] == "to")):
+						p_st, p_end = handle_name_fwd(concise_word_list[pres_index+3:], pres_index+3, isNotAllCaps)
 						if((p_st!=None) and (p_end != None)):
+							if(len(concise_word_list)>p_end+1):
+								if ( isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+									p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+									if(p_st_2!=None and p_end_2!=None):
+										return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
 							return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
 						else:
 							return None
-					elif( len(lower_word_list)):
-						return None
+					elif( len(lower_word_list)>(pres_index+4) and (lower_word_list[pres_index+1] == "award")):
+						if (((lower_word_list[pres_index+2] == "goes") and (lower_word_list[pres_index+3] == "to")) or ((lower_word_list[pres_index+2] == "is") and (lower_word_list[pres_index+3] == "for"))):
+							p_st, p_end = handle_name_fwd(concise_word_list[pres_index+4:], pres_index+4, isNotAllCaps)
+							if((p_st!=None) and (p_end != None)):
+								if(len(concise_word_list)>p_end+1):
+									if (isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+										p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+										if(p_st_2!=None and p_end_2!=None):
+											return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+							else:
+								return None
+						elif (lower_word_list[pres_index+2] == "="):
+							p_st, p_end = handle_name_fwd(concise_word_list[pres_index+3:], pres_index+3, isNotAllCaps)
+							if((p_st!=None) and (p_end != None)):
+								if(len(concise_word_list)>p_end+1):
+									if (isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+										p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+										if(p_st_2!=None and p_end_2!=None):
+											return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+							else:
+								return None
 					else:
 						return None
-				elif( (not (concise_word_list[pres_index+1] in grammar)) and ( concise_word_list[pres_index+1][0].isupper() or (concise_word_list[pres_index+1][0]=="@") )):
-					p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2)
-					if((p_st!=None) and (p_end != None)):
-						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
-					else:
-						return None
-
-
+			elif((not (lower_word_list[pres_index+1] in grammar)) and (concise_word_list[pres_index+1][0].isupper() or (concise_word_list[pres_index+1][0]=="@"))):
+				p_st, p_end = handle_name_fwd(concise_word_list[pres_index+1:], pres_index+1, isNotAllCaps)
+				if((p_st!=None) and (p_end != None)):
+					if(len(concise_word_list)>p_end+1):
+						if (isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+							p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+							if(p_st_2!=None and p_end_2!=None):
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+				else:
+					return None
 			return None
 		elif(pres_word == "presented"):
+			if( (len(lower_word_list) > pres_index+2) and (lower_word_list[pres_index+1]=="by")):
+				p_st, p_end = handle_name_fwd(concise_word_list[pres_index+2:], pres_index+2, isNotAllCaps)
+				if((p_st!=None) and (p_end != None)):
+					if(len(lower_word_list)>(p_end+1)):
+						if (isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+							p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+							if(p_st_2!=None and p_end_2!=None):
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif( (len(lower_word_list) > pres_index+4) and (lower_word_list[pres_index+1]=="to")):
+				if((lower_word_list[pres_index+2] in pronouns) and (lower_word_list[pres_index+3]=="by")):
+					p_st, p_end = handle_name_fwd(concise_word_list[pres_index+4:], pres_index+4, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(len(lower_word_list)>(p_end+1)):
+							if (isLowerAnd(lower_word_list[p_end+1]) or (lower_word_list[p_end+1] == "with") or (lower_word_list[p_end+1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_fwd(concise_word_list[p_end+2:], p_end+2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end_2)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+				elif( (pres_index>=1) and (concise_word_list[pres_index-1][0].isupper()) and (not (lower_word_list[pres_index-1] in pronouns))):
+					p_st, p_end = handle_name_bwd(concise_word_list[:pres_index], pres_index-1, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(pres_index>(p_end+1)):
+							if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif( (pres_index>=2) and (lower_word_list[pres_index-1] == "just")):
+				if(lower_word_list[pres_index-2] in pronouns):
+					return None
+				else:
+					p_st, p_end = handle_name_bwd(concise_word_list[:pres_index-1], pres_index-2, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(pres_index>(p_end+1)):
+							if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif((pres_index>=1) and (concise_word_list[pres_index-1][0].isupper())):
+				if(lower_word_list[pres_index-1] in pronouns):
+					return None
+				else:
+					p_st, p_end = handle_name_bwd(concise_word_list[:pres_index], pres_index-1, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(pres_index>(p_end+1)):
+							if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif(pres_index>=12 and (lower_word_list[pres_index-2]=="@")):
+				p_st, p_end = handle_name_bwd(concise_word_list[:pres_index], pres_index-1, isNotAllCaps)
+				if((p_st!=None) and (p_end != None)):
+					if(pres_index>(p_end+1)):
+						if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+							p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+							if(p_st_2!=None and p_end_2!=None):
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
 			return None
 		elif(pres_word == "presenting"):
+			if ((pres_index>=1) and (concise_word_list[pres_index-1][0].isupper()) and (not (lower_word_list[pres_index-1] in grammar)) and (not (lower_word_list[pres_index-1] in pronouns))):
+				p_st, p_end = handle_name_bwd(concise_word_list[:pres_index], pres_index-1, isNotAllCaps)
+				if((p_st!=None) and (p_end != None)):
+					if(p_st>=1):
+						if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+							p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+							if(p_st_2!=None and p_end_2!=None):
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif ((pres_index>=2) and (lower_word_list[pres_index-2]=="@")):
+				p_st, p_end = handle_name_bwd(concise_word_list[:pres_index], pres_index-1, isNotAllCaps)
+				if((p_st!=None) and (p_end != None)):
+					if(p_st>=1):
+						if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+							p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+							if(p_st_2!=None and p_end_2!=None):
+								return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+					return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif (pres_index>=2) and (lower_word_list[pres_index-1] in iswasare):
+				if (not (lower_word_list[pres_index-2] in pronouns)):
+					p_st, p_end = handle_name_bwd(concise_word_list[:pres_index-1], pres_index-2, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(p_st>=1):
+							if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+				elif (lower_word_list[pres_index-2] in whowhichthat):
+					p_st, p_end = handle_name_bwd(concise_word_list[:pres_index-2], pres_index-3, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(p_st>=1):
+							if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+			elif ((pres_index>=2) and (((lower_word_list[pres_index-1] == "now") and (lower_word_list[pres_index-2] == "is")) or ((lower_word_list[pres_index-1] == "be") and (lower_word_list[pres_index-2] == "will")))):
+				if(pres_index>=3) and (not (lower_word_list[pres_index-3] in pronouns)):
+					p_st, p_end = handle_name_bwd(concise_word_list[:pres_index-2], pres_index-3, isNotAllCaps)
+					if((p_st!=None) and (p_end != None)):
+						if(p_st>=1):
+							if (isLowerAnd(lower_word_list[p_st-1]) or (lower_word_list[p_st-1] == "with") or (lower_word_list[p_st-1] == "alongside")):
+								p_st_2, p_end_2 = handle_name_bwd(concise_word_list[:p_st-1], p_st-2, isNotAllCaps)
+								if(p_st_2!=None and p_end_2!=None):
+									return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st_2, p_end)
+						return printResults( map(correctParanthesis, concise_word_list), concise_tweet_body, p_st, p_end)
+				return None
 			return None
-
 	return None
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 tweets = list(open("goldenglobes.tab","r"))
-n_tweets = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
-n_tweets_2 = word_filter(nom_words, tweets)
-p_tweets_1 = word_filter([pres_words[0]], tweets)
-p_tweets_2 = word_filter([pres_words[1]], tweets)
-p_tweets_3 = word_filter([pres_words[2]], tweets)
+# n_tweets = multiple_consecutive_words_filter([["is", "nominated", "for"], ["was", "nominated", "for"]], tweets)
+# n_tweets_2 = word_filter(nom_words, tweets)
+
+p_tweets = word_filter(pres_words, tweets)
+# p_tweets_1 = word_filter([pres_words[0]], tweets)
+# p_tweets_2 = word_filter([pres_words[1]], tweets)
+# p_tweets_3 = word_filter([pres_words[2]], tweets)
 
 def extract_Info(event_name, inp_tweets):
 	lower_event_name = event_name.lower()
@@ -794,11 +947,22 @@ def run_Awards_Tests():
 			continue
 
 def run_Nom_Tests():
-	for tweet in n_tweets_2[:50]:
+	for tweet in n_tweets_2:
 		try:
 			nominee = get_nominee(tweet)
 			print "tweet is: ", tweet
 			print "nominee is: ", nominee
+		except:
+			print "FAILED:", tweet
+			print "~~~~~~~~~~~~~~~~~~~~~~~~"
+			continue
+
+def run_Pres_Tests():
+	for tweet in p_tweets:
+		try:
+			presenter = get_presenter(tweet)
+			print "tweet is: ", tweet
+			print "presenter is: ", presenter
 		except:
 			print "FAILED:", tweet
 			print "~~~~~~~~~~~~~~~~~~~~~~~~"
