@@ -1,10 +1,6 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~IDE Set up ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import nltk, string, os
 
-#OmarIDESetUpStuff: Ignore please
-# execfile('../Desktop/Code/nlp-eecs337/winner-finder.py')
-# os.chdir('../Desktop/Code/nlp-eecs337')
-
 def clear():
 	print "\n"*62
 
@@ -36,14 +32,12 @@ pronouns = ["i", "he", "she", "me", "them", "it", "who", "whom", "they", "and"]
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Misc Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def number_filter(search_array, data, or_flag=True):
-	#takes strings
 	matchingLines = []
 	if(or_flag):
 		for line in data:
 			for elt in search_array:
 				if (elt.isdigit()):
 					if elt in line:
-						# print linep
 						matchingLines.append(line)
 					else:
 						continue
@@ -955,8 +949,7 @@ def get_venue(tweet):
 					return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
 	return None
 
-
-def get_host():
+def get_host(inp_tweets):
 	word_file = open("wordsEn.txt", "r")
 	en_words = set([word.strip().lower() for word in word_file])
 	host = []
@@ -1000,8 +993,6 @@ def extract_Awards_Info(event_name, inp_tweets):
 		pairings = []
 		for i in awards_tweets:
 			award = get_award(i)
-			# print "award won is: ", award
-			# print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 			pairings.append(award)
 		return pairings
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
@@ -1010,8 +1001,6 @@ def extract_Awards_Info(event_name, inp_tweets):
 		pairings = []
 		for i in awards_tweets:
 			award = get_award(i)
-			# print "award won is: ", award
-			# print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 			pairings.append(award)
 		return pairings
 	else:
@@ -1022,29 +1011,13 @@ def extract_Winners_Info(event_name, inp_tweets):
 	if("golden globe" in lower_event_name):
 		GG_tweets = number_filter([GG_tweet_id], inp_tweets)
 		awards_tweets = word_filter(congrats_words, GG_tweets)
-		# nom_tweets = word_filter(nom_words, inp_tweets)
-		nom_tweets = word_filter(["nominee"], inp_tweets)
-		venue_tweets = word_filter(venue_words, inp_tweets)
 		pairings = []
-		# for i in awards_tweets:
-		# 	winner, award = get_winner(i), get_award(i)
-		# 	print "winner is: ", winner
-		# 	print "award won is: ", award
-		# 	print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-		# 	pairings.append((winner, award))
-		nominees = []
-		for i in nom_tweets:
-			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-			print "i is : ", i
-			nominee, award = get_nominee(i), get_award(i)
-			if(nominee!=None):
-				nominees.append(str.lower(nominee))
-				print "nominee is: ", nominee
-			elif((nominee==None) and (award!=None)):
-				nominee = match_nominee_award(nominees,i)
-			if((nominee!=None) and (award!=None)):
-				print nominee, " is nominated for ", award
-				pairings.append( (nominee, award) )
+		for i in awards_tweets:
+			winner, award = get_winner(i), get_award(i)
+			# print "winner is: ", winner
+			# print "award won is: ", award
+			# print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			pairings.append( (winner, award) )
 		return pairings
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
 		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
@@ -1070,9 +1043,6 @@ def extract_Nominees_Info(event_name, inp_tweets):
 					award = get_award(i)
 				except:
 					award = None
-				# print "nominee is: ", nominee
-				# print "award won is: ", award
-				# print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				pairings.append( (nominee, award))
 		return pairings
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
@@ -1085,117 +1055,70 @@ def extract_Nominees_Info(event_name, inp_tweets):
 					award = get_award(i)
 				except:
 					award = None
-				# print "nominee is: ", nominee
-				# print "award won is: ", award
-				# print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				pairings.append( (nominee, award))
 		return pairings
 
-def extract_Host_Info(event_name, inp_tweets):
+def extract_Host_Info(inp_tweets):
 	hosts = get_host(inp_tweets)
-	# if len(hosts) == 1:
-	# 	print "Host is " + hosts[0] + "."
-	# else:
-	# 	print "Hosts are " + hosts[0] + " and " + hosts[1] + "."
 	return hosts
 
-def extract_Venue_Info(event_name, inp_tweets):
-	lower_event_name = event_name.lower()
-	venue_tweets = word_filter(venue_words, inp_tweets)
+def extract_Venue_Info(inp_tweets):
+	venue_tweets = word_filter(award_show_names+venue_words, inp_tweets)
 	pairings = []
+	venueList = []
 	for i in venue_tweets:
-		venue = get_venue
+		venue = get_venue(i)
 		if(venue!=None):
-			pairings.append(venue)
-			# print "The venue is: ", venue
-			# print i
-			# print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	return pairings
-
-def extract_Info_With_Venue(event_name, inp_tweets):
-	lower_event_name = event_name.lower()
-	if("golden globe" in lower_event_name):
-		GG_tweets = number_filter([GG_tweet_id], inp_tweets)
-		awards_tweets = word_filter(congrats_words, GG_tweets)
-		# nom_tweets = word_filter(nom_words, inp_tweets)
-		# nom_tweets = word_filter(["nominee"], inp_tweets)
-		venue_tweets = word_filter(venue_words, inp_tweets)
-		venue_tweets += word_filter(award_show_names, inp_tweets)
-		pairings = []
-		# for i in awards_tweets:
-		# 	winner, award = get_winner(i), get_award(i)
-		# 	print "winner is: ", winner
-		# 	print "award won is: ", award
-		# 	print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-		# 	pairings.append((winner, award))
-		# nominees = []
-		# for i in nom_tweets:
-		# 	print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-		# 	print "i is : ", i
-		# 	nominee, award = get_nominee(i), get_award(i)
-		# 	if(nominee!=None):
-		# 		nominees.append(str.lower(nominee))
-		# 		print "nominee is: ", nominee
-		# 	elif((nominee==None) and (award!=None)):
-		# 		nominee = match_nominee_award(nominees,i)
-		# 	if((nominee!=None) and (award!=None)):
-		# 		print nominee, " is nominated for ", award
-		# 		pairings.append( (nominee, award) )
-		venueList = []
-		for i in venue_tweets:
-			venue = get_venue(i)
-			if(venue!=None):
-				print i
-				print "The venue is: ", venue
-				print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-				venueList.append(venue)
-
-		venueListCount = {}
-		for i in venueList:
-			if(i not in venueListCount):
-				venueListCount[i] = 1
-			elif(i in venueListCount):
-				venueListCount[i] += 1
-
-		mostCommonVenueCount = 0
-		mostCommonVenue = None
-		for i in venueListCount.keys():
-			if(venueListCount[i] > mostCommonVenueCount):
-				mostCommonVenueCount = venueListCount[i]
-				mostCommonVenue = i
-
-		print "The list of possible venues is: ", venueList
-		print "The most common venue is: ", mostCommonVenue
-		return mostCommonVenue
-	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
-		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
-		awards_tweets = word_filter(congrats_words, GG_tweets)
+			# print i # print "The venue is: ", venue # print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			venueList.append(venue)
+	venueListCount = {}
+	for i in venueList:
+		if(i not in venueListCount):
+			venueListCount[i] = 1
+		elif(i in venueListCount):
+			venueListCount[i] += 1
+	mostCommonVenueCount = 0
+	mostCommonVenue = None
+	for i in venueListCount.keys():
+		if(venueListCount[i] > mostCommonVenueCount):
+			mostCommonVenueCount = venueListCount[i]
+			mostCommonVenue = i
+	# print "The list of possible venues is: ", venueList # print "The most common venue is: ", mostCommonVenue
+	return mostCommonVenue
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Demo ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def run_Names_Tests():
-	GG_tweets = number_filter([GG_tweet_id], tweets)
-	awards_tweets = word_filter(congrats_words, GG_tweets)
-	for i in extensive_awards_tweets:
+def run_Names_Tests(extensive=False):
+	if(extensive):
+		for i in extensive_awards_tweets:
 		print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		print i
 		a = get_winner(i)		
 		print "winner is: ", a
+	else:	
+		GG_tweets = number_filter([GG_tweet_id], tweets)
+		awards_tweets = word_filter(congrats_words, GG_tweets)
+		for i in awards_tweets:
+			print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+			print i
+			a = get_winner(i)		
+			print "winner is: ", a
 		
-def run_Awards_Tests():
-	GG_tweets = number_filter([GG_tweet_id], tweets)
-	awards_tweets = word_filter(congrats_words, GG_tweets)
-	for i in extensive_awards_tweets:
-		try:
+def run_Awards_Tests(extensive=False):
+	if(extensive):
+		for i in extensive_awards_tweets:
 			a = get_award(i)
 			print a
-		except:
-			print "FAILED:", i
-			continue
+	else:
+		GG_tweets = number_filter([GG_tweet_id], tweets)
+		awards_tweets = word_filter(congrats_words, GG_tweets)
+		for i in awards_tweets:
+			a = get_award(i)
+			print a
 
-def run_Nom_Tests():
+def run_Nom_Tests(numIterations=50):
 	n_tweets = word_filter(nom_words, tweets)
-	for tweet in n_tweets[:50]:
+	for tweet in n_tweets[:numIterations]:
 		try:
 			nominee = get_nominee(tweet)
 			print "tweet is: ", tweet
@@ -1205,9 +1128,9 @@ def run_Nom_Tests():
 			print "~~~~~~~~~~~~~~~~~~~~~~~~"
 			continue
 
-def run_Pres_Tests():
+def run_Pres_Tests(numIterations=50):
 	p_tweets = word_filter(pres_words, tweets)
-	for tweet in p_tweets:
+	for tweet in p_tweets[:numIterations]:
 		try:
 			presenter = get_presenter(tweet)
 			print "tweet is: ", tweet
@@ -1218,13 +1141,15 @@ def run_Pres_Tests():
 			continue
 
 def run_Host_Tests():
-	hosts = get_host()
+	hosts = get_host(tweets)
 	if len(hosts) == 1:
-		print "Host is " + hosts[0] + "."
+		print "The host is " + hosts[0] + "."
 	else:
-		print "Hosts are " + hosts[0] + " and " + hosts[1] + "."
+		print "The hosts are " + hosts[0] + " and " + hosts[1] + "."
 
 def run_Venue_Tests():
+	venue = extract_Venue_Info(tweets)
+	print "our venue is :", venue
 	venue_tweets = word_filter(venue_words, tweets)
 	for tweet in venue_tweets:
 		try:
@@ -1234,6 +1159,13 @@ def run_Venue_Tests():
 				print "venue is: ", venue
 		except:
 			pass
+
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~ Misc ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#Additional tweets to illustrate robustness of our algorithms
 
 extensive_awards_tweets = ["Congratulations to Moonlight (@moonlightmov) - Best Motion Picture - Drama - #GoldenGlobes https://t.co/NqBZd5uBso	Golden Globe Awards	18667907	818306803750420480	2017-01-09 04:02:00",
 "Congratulations to Isabelle Huppert - Best Actress in a Motion Picture - Drama - Elle - #GoldenGlobes https://t.co/wrkbydAtoL	Golden Globe Awards	18667907	818305939107434496	2017-01-09 03:58:33",
