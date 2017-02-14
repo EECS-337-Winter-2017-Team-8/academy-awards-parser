@@ -20,7 +20,7 @@ nom_words = ["nominee", "nominated"]
 pres_words = ["presenter", "presented", "presenting"]
 venue_words = ["red", "carpet"]
 
-award_show_names = ["golden", "globes", "goldenglobes", "oscars", "academy", "academyawards", "awards"]
+award_show_names = ["golden", "globes", "goldenglobes", "#goldenglobes", "oscars", "#oscars", "academy", "#theacademy", "#academyawards", "academyawards", "awards"]
 
 adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
 genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
@@ -873,20 +873,23 @@ def get_venue(tweet):
 		
 	isNotAllCaps = notEveryWordIsCaps(concise_word_list)
 
-	red_index = None
+	red_index, ceremony_index = None, None
 	v_st, v_end, increment = 0, 0, 0
 
 	for i in lower_word_list:
 		if(i == "red"):
 			red_index = lower_word_list.index(i)
 			increment = 1
+		elif(i in award_show_names):
+			ceremony_index = lower_word_list.index(i)
+			increment = 1
 	
-	if(red_index == None):
+	if((red_index == None) and (ceremony_index == None)):
 		return None
 
 	listLen = len(lower_word_list)
 
-	if(red_index+increment < listLen):
+	if((red_index!=None) and (red_index+increment < listLen)):
 		if(lower_word_list[red_index+increment]=="carpet"):
 			carpet_index = red_index+increment
 			increment += 1
@@ -920,14 +923,39 @@ def get_venue(tweet):
 						else:				
 							v_st, v_end = handle_name_fwd(concise_word_list[red_index+increment:], red_index+increment, isNotAllCaps)
 							return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
-					return None
+	elif((ceremony_index!=None)) and (ceremony_index+increment < listLen):
+		if((lower_word_list[ceremony_index+increment] == "@") or (lower_word_list[ceremony_index+increment] == "at")):
+			at_index, at_token = ceremony_index+increment, lower_word_list[ceremony_index+increment]
+			increment += 1
+			at_tweet_index = tweet_body.find(at_token)
+			if(tweet_body[at_tweet_index+1]!=" "):
 				return None
-			return None
-		return None
+			elif(lower_word_list[ceremony_index+increment] in award_show_names):
+				return None
+			elif(lower_word_list[ceremony_index+increment] == "the"):
+				the_index = ceremony_index+increment
+				increment += 1
+				if(lower_word_list[ceremony_index+increment] in award_show_names):
+					return None
+				elif((lower_word_list[ceremony_index+increment] == "@") or (lower_word_list[ceremony_index+increment] == "#")):
+					increment += 1
+					if(lower_word_list[ceremony_index+increment] in award_show_names):
+						return None
+					else:
+						v_st, v_end = handle_name_fwd(concise_word_list[ceremony_index+increment:], ceremony_index+increment, isNotAllCaps)
+						return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
+				else:
+					v_st, v_end = handle_name_fwd(concise_word_list[ceremony_index+increment:], ceremony_index+increment, isNotAllCaps)
+					return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
+			elif(lower_word_list[ceremony_index+increment] == "@" or "#"):
+				if(lower_word_list[ceremony_index+increment] in award_show_names):
+					return None
+				else:				
+					v_st, v_end = handle_name_fwd(concise_word_list[ceremony_index+increment:], ceremony_index+increment, isNotAllCaps)
+					return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
 	return None
 
 
-=======
 def get_host():
 	word_file = open("wordsEn.txt", "r")
 	en_words = set([word.strip().lower() for word in word_file])
@@ -959,7 +987,6 @@ def get_host():
 	word_file.close()
 
 	return host
->>>>>>> 559c11fe34c1a0eb80aafd7583b3cfecf38a9ab8
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1032,6 +1059,7 @@ def extract_Info_With_Venue(event_name, inp_tweets):
 		# nom_tweets = word_filter(nom_words, inp_tweets)
 		# nom_tweets = word_filter(["nominee"], inp_tweets)
 		venue_tweets = word_filter(venue_words, inp_tweets)
+		venue_tweets += word_filter(award_show_names, inp_tweets)
 		pairings = []
 		# for i in awards_tweets:
 		# 	winner, award = get_winner(i), get_award(i)
@@ -1056,12 +1084,28 @@ def extract_Info_With_Venue(event_name, inp_tweets):
 		for i in venue_tweets:
 			venue = get_venue(i)
 			if(venue!=None):
-				print "The venue is: ", venue
 				print i
+				print "The venue is: ", venue
 				print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 				venueList.append(venue)
 
-		return venueList
+		venueListCount = {}
+		for i in venueList:
+			if(i not in venueListCount):
+				venueListCount[i] = 1
+			elif(i in venueListCount):
+				venueListCount[i] += 1
+
+		mostCommonVenueCount = 0
+		mostCommonVenue = None
+		for i in venueListCount.keys():
+			if(venueListCount[i] > mostCommonVenueCount):
+				mostCommonVenueCount = venueListCount[i]
+				mostCommonVenue = i
+
+		print "The list of possible venues is: ", venueList
+		print "The most common venue is: ", mostCommonVenue
+		return mostCommonVenue
 	elif (("academy awards" in lower_event_name) | ("oscars" in lower_event_name)):
 		Combined_tweets = number_filter([TheAcademy_tweet_id, Oscars_Live_id], inp_tweets)
 		awards_tweets = word_filter(congrats_words, GG_tweets)
