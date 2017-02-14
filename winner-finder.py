@@ -19,6 +19,7 @@ win_words = ["wins", "won", "winning", "winner"]
 nom_words = ["nominee", "nominated"]
 pres_words = ["presenter", "presented", "presenting"]
 venue_words = ["red", "carpet"]
+award_show_names = ["golden", "globes", "goldenglobes", "oscars", "academy", "academyawards", "awards"]
 
 adjectives = ["adapted", "animated", "best", "feature", "lead", "leading", "made", "motion", "original",  "short", "starring", "supporting", "visual"]
 genres = ["action", "adventure", "comedy", "drama", "foreign", "independent", "musical", "suspense", "thriller"]
@@ -890,64 +891,6 @@ def get_host(inp_tweets):
 	word_file.close()
 
 	return host
-
-def get_venue(tweet):
-    tweet_body = correctAmpersands(tweet).split("\t")[0]
-    word_list = nltk.word_tokenize(tweet_body)
-    concise_word_list = cutRT(word_list)
-    lower_word_list = map(str.lower, concise_word_list)
-    
-    if(tweet[0:4]=="RT @"):
-        concise_tweet_body = tweet_body.replace("&amp;","&")[tweet.index(":")+1:]
-    else:
-        concise_tweet_body = tweet_body.replace("&amp;","&")
-        
-    isNotAllCaps = notEveryWordIsCaps(concise_word_list)
-
-    red_index = None
-    v_st, v_end = 0, 0
-
-    for i in lower_word_list:
-        if(i == "red"):
-            red_index = lower_word_list.index(i)
-            increment = 1
-            if(lower_word_list[red_index+increment]=="carpet"):
-                carpet_index = red_index+increment
-                increment += 1
-                if(lower_word_list[red_index+increment] == "@" or "at"):
-                    at_index, at_token = red_index+increment, lower_word_list[red_index+increment]
-                    increment += 1
-                    at_tweet_index = tweet_body.find(at_token)
-                    if(tweet_body[at_tweet_index]+1!=" "):
-                        return None
-                    elif(lower_word_list[red_index+increment] in award_show_names):
-                        return None
-                    elif(lower_word_list[red_index+increment] == "the"):
-                        the_index = red_index+increment
-                        increment += 1
-                        if(lower_word_list[red_index+increment] in award_show_names):
-                            return None
-                        elif(lower_word_list[red_index+increment] == "@" or "#"):
-                            increment += 1
-                            if(lower_word_list[red_index+increment] in award_show_names):
-                                return None
-                            else:
-                                v_st, v_end = handle_name_fwd(concise_word_list[red_index+increment:], red_index+increment, isNotAllCaps)
-                                return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
-                        else:
-                            v_st, v_end = handle_name_fwd(concise_word_list[red_index+increment:], red_index+increment, isNotAllCaps)
-                            return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
-                    elif(lower_word_list[red_index+increment] == "@" or "#"):
-                        if(lower_word_list[red_index+increment] in award_show_names):
-                            return None
-                        else:                        
-                            increment += 1
-                            v_st, v_end = handle_name_fwd(concise_word_list[red_index+increment:], red_index+increment, isNotAllCaps)
-                            return printResults( map(correctParanthesis, concise_word_list), tweet_body, v_st, v_end)
-                    return None
-                return None
-            return None
-        return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~ User Interface ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
